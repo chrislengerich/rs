@@ -15,6 +15,8 @@ from transformers import Trainer, TrainingArguments
 class Agent:
     def predict(prompt: str, rollout: Rollout):
         pass
+
+x = Agent()
     
 class SequenceDataset(Dataset):
     
@@ -150,7 +152,7 @@ class TransformerAgent(Agent):
         """Run a short fine-tuning of the model on a rollout batch."""
         train_dataloader = self.rollout_dataloader(train_rollouts)
         eval_dataloader = self.rollout_dataloader(eval_rollouts)
-        self.train(train_dataloader, test_dataloader)
+        self.train(train_dataloader, eval_dataloader)
                 
     def train_sequence(self, train_sequences: List[str], eval_sequences: List[str]):
         """Run fine-tuning on sequences."""
