@@ -43,6 +43,8 @@ def init_models(device=-1):
     return OpenAIGPTTokenizer.from_pretrained('openai-gpt'), pipeline('text-generation', model='gpt2', device=device)
 
 class TransformerAgent(Agent):
+
+    learning_trajectories = []
     
     def __init__(self, tokenizer, generator, device=-1):
         self.device = torch.device('cpu') if device == -1 else torch.device('cuda')
@@ -59,8 +61,12 @@ class TransformerAgent(Agent):
         #modules = [module for module in self.model.modules() if not isinstance(module, torch.nn.Sequential)]
         #fine_tuned_params = list(list(modules[0].modules())[0].modules())[-1].parameters()
         self.optimizer = AdamW(self.model.parameters(), lr=1e-6)
+
+    def reset_state(self):
+        self.learning_trajectories = []
         
     def predict_sequence(self, prompt: str):
+        self.learning_trajectories.append("predict_sequence")
         self.generator.model.eval()
         inputs = self.tokenizer(prompt, return_tensors="pt")
         inputs['input_ids'] = inputs['input_ids'][:,-self.max_prompt_length:]
@@ -82,6 +88,7 @@ class TransformerAgent(Agent):
         return text
     
     def predict_rollout(self, prompt: str, rollout: Rollout):
+        self.learning_trajectories.append("predict_rollout")
         prompt = str(rollout["trajectory"]) + f'state: [{prompt}] goal: [{rollout["goal"]}] action: [ '
         return self.predict_sequence(prompt)
     
@@ -94,6 +101,7 @@ class TransformerAgent(Agent):
         return DataLoader(dataset, shuffle=False, batch_size=1)
     
     def train(self, train_dataloader: DataLoader, eval_dataloader: DataLoader):
+        self.learning_trajectories.append("train")
         """Run fine-tuning, given two dataloaders which output sequences."""
         model = self.generator.model
         num_training_steps = self.training_epochs * len(train_dataloader)
@@ -160,6 +168,9 @@ class TransformerAgent(Agent):
         eval_dataloader = self.sequence_dataloader(eval_sequences)
         #self.trainer(train_dataloader, eval_dataloader)
         self.train(train_dataloader, eval_dataloader)
+
+    def generate_game(self):
+        """Generates a text-based game at a specific difficulty level."""
     
 class HumanAgent(Agent):
         

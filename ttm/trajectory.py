@@ -26,7 +26,6 @@ class Trajectory(list):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}] "
         for i, (state, _, action) in enumerate(self):
-            #goal = "lock the chest with the key"
             state = re.sub("[\n\t]", "", state).split(".")[0]
             string_repr += f"step {i} state: [{state}] action: [{action.strip()}] || "
         return string_repr
