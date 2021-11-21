@@ -26,7 +26,8 @@ class Agent:
 
 class TransformerAgent(Agent):
 
-    learning_trajectories = Trajectory()
+    learning_trajectory = []
+    rollouts = []
     
     def __init__(self, agent_goal:str, device=-1):
         self.device = torch.device('cpu') if device == -1 else torch.device('cuda')
@@ -50,8 +51,9 @@ class TransformerAgent(Agent):
         torch.cuda.empty_cache()
         self.generator = pipeline('text-generation', model=path, tokenizer='openai-gpt', device=self.device_no)
 
-    def reset_state(self):
-        self.learning_trajectories = Trajectory()
+    def reset_state(self, goal, scores):
+        self.rollouts.append(Rollout(self.learning_trajectory, goal, scores))
+        self.learning_trajectory = []
 
     def parse_action(self, generated_text: str, prefix: str):
         split_text = generated_text[len(prefix):]
@@ -61,7 +63,7 @@ class TransformerAgent(Agent):
         return self.generator(prompt)[0]["generated_text"]
 
     def append_state(self, action):
-        self.learning_trajectories.append(["", self.agent_goal, action])
+        self.learning_trajectory.append(["", self.agent_goal, action])
     
     def predict(self, prompt: str, rollout: Rollout):
         self.append_state("predict_rollout")
@@ -70,7 +72,7 @@ class TransformerAgent(Agent):
         action = self.parse_action(prediction, prompt)
         return action, prediction
                 
-    def train(self, output_dir: str, train_path: str = 'rollouts.txt', eval_path: str = 'rollouts.txt', ):
+    def train(self, output_dir: str, train_path: str = 'rollouts.txt', eval_path: str = 'rollouts.txt'):
         self.append_state(f"train: train_path: {train_path} eval_path: {eval_path} output_dir: {output_dir}")
         train_dataset = LineByLineTextDataset(self.tokenizer, train_path, block_size=512)
         eval_dataset = LineByLineTextDataset(self.tokenizer, eval_path, block_size=512)
@@ -79,8 +81,8 @@ class TransformerAgent(Agent):
             output_dir=output_dir,  # The output directory
             overwrite_output_dir=True,  # overwrite the content of the output directory
             num_train_epochs=3,  # number of training epochs
-            per_device_train_batch_size=32,  # batch size for training
-            per_device_eval_batch_size=64,  # batch size for evaluation
+            per_device_train_batch_size=5, #32,  # batch size for training
+            per_device_eval_batch_size=5, #64,  # batch size for evaluation
             eval_steps=400,  # Number of update steps between two evaluations.
             save_steps=800,  # after # steps model is saved
             warmup_steps=500,  # number of warmup steps for learning rate scheduler
