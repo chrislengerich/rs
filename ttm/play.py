@@ -12,9 +12,6 @@ from trajectory import Trajectory, Rollout, Goal
 
 import pdb, sys
 
-from ttm import data
-
-
 def get_goal(env):
     """
     Get the current goal from the environment.
@@ -30,24 +27,22 @@ def setup_game(game: str= "grounding_game_0.z8"):
     env = gym.make(env_id)  # Start the environment.
     return env
 
-def build_game(world_size: float, seed: int = None) -> str:
-    """Builds a text-world game at a specific difficulty level, returning the game name."""
-    if not seed:
-        seed = random.randint(0, 100000)
-    name = f"grounding_game_{world_size}_{seed}.z8"
-    subprocess.check_output(["tw-make", "custom", "--world-size", {world_size}, "--nb-objects", "4", "--quest-length",
-                             "1", "--seed", seed, "--output", "tw_games", name])
+agent_goal = "score = 10000"
+agent = TransformerAgent(agent_goal, device=0)
+max_train_epochs = 1
+train_epochs = 0
+
 # Meta-learning agent.
-
+# Currently uses a fixed policy to achieve its objective.
 while train_epochs < max_train_epochs:
-    game = build_game(1,1)
+    game = agent.build_game(1,1)
     env = setup_game(game)
-    agent = TransformerAgent()
+    if train_epochs == 0:
+        agent.load_inference("ttm/gpt2-rollout")
+    else:
+        agent.load_inference("ttm/gpt2-rollout-post")
 
-    max_train_epochs = 1
-    train_epochs = 0
-
-    delay = 0 #s
+    delay = 0.5 #s
     goal = get_goal(env)
     print(f"goal is '{goal}'")
     max_actions = 4 #3
@@ -62,10 +57,11 @@ while train_epochs < max_train_epochs:
         score, actions, done = 0, 0, False
         trajectory = Trajectory()
         goal = Goal(goal)
+        trajectory.append(["", goal, "start"])
         scores = []
         rollout = Rollout(trajectory, goal, scores)
         while not done and actions < max_actions:
-            command = agent.predict(obs, rollout)
+            command, prediction = agent.predict(obs, rollout)
             trajectory.append([obs, goal, command])
             obs, score, done, infos = env.step(command)
             print(infos)
@@ -74,13 +70,18 @@ while train_epochs < max_train_epochs:
             env.render()
             actions += 1
         rollouts.append(rollout)
+    rollout_path = agent.write_rollouts(rollouts, game)
+    if train_epochs == 0:
+        agent.load_model("ttm/gpt2-rollout")
+    else:
+        agent.load_model("ttm/gpt2-rollout-post")
+    agent.train("ttm/gpt2-rollout-post", rollout_path, rollout_path)
 
-    # write the rollouts data out.
-    with open(f"rollouts_{game}.pkl", "wb") as f:
-        pickle.dump(rollouts, f)
-    data.write_rollouts_text(f"rollouts_{game}.pkl", f"rollouts_{game}.txt")
+    agent.learning_trajectories.append([f"score = {sum(scores)}", agent_goal, "ground_score"])
+    rollout_path = agent.write_rollouts([Rollout(agent.learning_trajectories, agent_goal, scores)], "metalearning")
 
-    agent.train(self, )
+    # TODO: Train the meta-learning policy on the learning trajectories.
+    # TODO: Make decisions about learning based on the learning trajectories.
 
     # train the agent on the data.
     train_epochs += 1

@@ -2,7 +2,7 @@ import pickle
 
 def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt'):
     """
-    Write rollouts to a text file.
+    Write rollouts to a text file, optionally compressing them for training.
     """
     with open(rollouts_filepath, 'rb') as f:
       rollouts = pickle.load(f)
