@@ -1,4 +1,5 @@
 import gc
+import os
 import pickle
 
 import subprocess
@@ -16,13 +17,70 @@ from tqdm.auto import tqdm
 from torch.utils.data import IterableDataset
 from trajectory import Rollout
 from transformers import Trainer, TrainingArguments
+import openai
 
 from ttm import data
 
-
 class Agent:
-    def predict(prompt: str, rollout: Rollout):
+    def predict(self, prompt: str, rollout: Rollout):
         pass
+
+class GPT3Agent(Agent):
+
+    def predict(self, prompt: str):
+        """Dispatches a query to GPT-3."""
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=500)
+        return response
+
+class WhatCanIDo(GPT3Agent):
+
+    name = "whatcanido"
+
+    prefix = """
+    New example:
+    Goal [ Close the trunk ]
+    State [ You've just walked into a spare room. The room is well lit. You smell an interesting smell, 
+    and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] Action [ query: what can I do? ]
+    Answer [ You can open and close the trunk. You can look at the workbench. ]
+            
+    New example:
+    Goal [ Get the camera ]
+    State [ You're in a room with a window. There's a camera on the window. ] Action [ query: what can I do? ]
+    Answer [ You can get the camera ]
+           
+    New example:
+    Goal [ {goal} ]
+    State [ {state} ]
+    Answer ["""
+
+    def parse(self, response: str, parse_regex='([^]]*)\].*'):
+        response_str = response["choices"][0]["text"]
+        response_str = response_str.replace("\n", " ")
+        match = re.match(parse_regex, response_str)
+        if match:
+            return match.group(1)
+        else:
+            if len(response_str) < 40:
+                return response_str
+            else:
+                return None
+
+    def predict_rollout(self, rollout: Rollout):
+        formatted_query = self.prefix.format(goal=rollout.goal, state=rollout["trajectory"].state()[-1])
+        response = self.predict(formatted_query)
+        return self.parse(response), response, formatted_query
+
+    def predict_state(self, goal: str, state: str):
+        formatted_query = self.prefix.format(goal=goal, state=state)
+        print(formatted_query)
+        response = self.predict(formatted_query)
+        return self.parse(response), response, formatted_query
+
+agent_registry = {
+    "whatcanido": WhatCanIDo,
+    "gpt3": GPT3Agent
+}
 
 class TransformerAgent(Agent):
 
@@ -71,7 +129,7 @@ class TransformerAgent(Agent):
         prediction = self.predict_sequence(prompt)
         action = self.parse_action(prediction, prompt)
         return action, prediction
-                
+
     def train(self, output_dir: str, train_path: str = 'rollouts.txt', eval_path: str = 'rollouts.txt'):
         self.append_state(f"train: train_path: {train_path} eval_path: {eval_path} output_dir: {output_dir}")
         train_dataset = LineByLineTextDataset(self.tokenizer, train_path, block_size=512)
