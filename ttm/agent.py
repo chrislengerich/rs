@@ -30,7 +30,9 @@ class GPT3Agent(Agent):
     def predict(self, prompt: str):
         """Dispatches a query to GPT-3."""
         openai.api_key = os.getenv("OPENAI_API_KEY")
+        print(prompt)
         response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=500)
+        print(response)
         return response
 
 class WhatCanIDo(GPT3Agent):
@@ -126,8 +128,12 @@ class TransformerAgent(Agent):
     def predict(self, prompt: str, rollout: Rollout):
         self.append_state("predict_rollout")
         prompt = str(rollout["trajectory"]) + f'state: [{prompt}] action: [ '
-        prediction = self.predict_sequence(prompt)
-        action = self.parse_action(prediction, prompt)
+        if False:
+            prediction = self.predict_sequence(prompt)
+            action = self.parse_action(prediction, prompt)
+        else:
+            prediction = GPT3Agent().predict(prompt)
+            action = WhatCanIDo().parse(prediction)
         return action, prediction
 
     def train(self, output_dir: str, train_path: str = 'rollouts.txt', eval_path: str = 'rollouts.txt'):

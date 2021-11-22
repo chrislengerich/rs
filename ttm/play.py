@@ -80,7 +80,8 @@ while train_epochs < max_train_epochs:
         scores = []
         rollout = Rollout(trajectory, goal, scores)
         while not done and actions < max_actions:
-            metalearn_action, metalearn_prediction = get_metalearning_action(agent, metalearn_goal)
+            #metalearn_action, metalearn_prediction = get_metalearning_action(agent, metalearn_goal)
+            metalearn_action = "predict"
             print(f"metalearn action >>>> {metalearn_action} <<<<")
             if train_epochs == 0:
                 agent.load_inference("ttm/gpt2-rollout")
