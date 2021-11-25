@@ -1,6 +1,7 @@
 import gc
 import os
 import pickle
+import pprint
 
 import subprocess
 from transformers import OpenAIGPTTokenizer, OpenAIGPTModel, OpenAIGPTLMHeadModel, AdamW, \
@@ -22,59 +23,110 @@ import openai
 from ttm import data
 
 class Agent:
+
+    learning_trajectory = []
+    rollouts = []
+
+    def __init__(self, agent_goal: str, device=0):
+        self.agent_goal = agent_goal
+
     def predict(self, prompt: str, rollout: Rollout):
         pass
 
+    def load_inference(self, path: str):
+        pass
+
+    def load_model(self, path: str):
+        pass
+
+    def train(self, output_dir: str, train_path: str = 'rollouts.txt', eval_path: str = 'rollouts.txt'):
+        pass
+
+    def append_state(self, action):
+        self.learning_trajectory.append(["", self.agent_goal, action])
+
+    def reset_state(self, goal, scores):
+        self.rollouts.append(Rollout(self.learning_trajectory, goal, scores))
+        self.learning_trajectory = []
+
+    def build_game(self, world_size: float, seed: int = None) -> str:
+        """Builds a text-world game at a specific difficulty level, returning the game name."""
+        self.append_state(f"build_game: world_size: {world_size} seed: {seed}")
+        if not seed:
+            seed = random.randint(0, 100000)
+        name = f"grounding_game_{world_size}_{seed}.z8"
+        subprocess.check_output(
+            ["tw-make", "custom", "--world-size", str(world_size), "--nb-objects", "4", "--quest-length", "1", "--seed",
+             str(seed), "--output", f"tw_games/{name}"])
+        return name
+
+    def write_rollouts(self, rollouts: List[Rollout], game: str, policy: str):
+        # write the rollouts data out to pickled versions and flat files for training.
+        pickle_path = f"ttm/data/rollouts_{game}_{policy}.pkl"
+        txt_path = f"ttm/data/rollouts_{game}_{policy}.txt"
+        self.append_state(f"write_rollouts: {txt_path}")
+        with open(pickle_path, "wb") as f:
+            pickle.dump(rollouts, f)
+        data.write_rollouts_text(pickle_path, txt_path)
+        return txt_path
+
+    def get_metalearning_action(self, agent, obs, rollout):
+        agent.load_inference("ttm/gpt2-metalearn")
+        action = agent.predict(obs, rollout)[0].strip()
+        print(action)
+        self.append_state(action)
+        return action
+
 class GPT3Agent(Agent):
+
+    motivating_contexts: List[str] = None
+    name: str = None
+    prefix: List[str] = None
+    parse_regex: str = None
+
+    def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
+        for param in ["prefix", "motivating_examples", "grounding_data"]:
+            with open(os.path.join(path, param), "r") as f:
+                self.__dict__[param] = [l.strip() for l in f.readlines()]
+        for param in ["name", "parse_regex"]:
+            with open(os.path.join(path, param), "r") as f:
+                self.__dict__[param] = [l.strip().replace('\\\\', '\\') for l in f.readlines()][0]
+        super().__init__(agent_goal, device)
 
     def predict(self, prompt: str):
         """Dispatches a query to GPT-3."""
         openai.api_key = os.getenv("OPENAI_API_KEY")
+        print("PROMPT>>>>")
         print(prompt)
         response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=500)
+        print("RESPONSE>>>>")
         print(response)
         return response
 
+    def __str__(self):
+        return pprint.pformat(self.__dict__)
+
 class WhatCanIDo(GPT3Agent):
 
-    name = "whatcanido"
-
-    prefix = """
-    New example:
-    Goal [ Close the trunk ]
-    State [ You've just walked into a spare room. The room is well lit. You smell an interesting smell, 
-    and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] Action [ query: what can I do? ]
-    Answer [ You can open and close the trunk. You can look at the workbench. ]
-            
-    New example:
-    Goal [ Get the camera ]
-    State [ You're in a room with a window. There's a camera on the window. ] Action [ query: what can I do? ]
-    Answer [ You can get the camera ]
-           
-    New example:
-    Goal [ {goal} ]
-    State [ {state} ]
-    Answer ["""
-
-    def parse(self, response: str, parse_regex='([^]]*)\].*'):
+    def parse(self, response: str):
         response_str = response["choices"][0]["text"]
         response_str = response_str.replace("\n", " ")
-        match = re.match(parse_regex, response_str)
+        match = re.match(self.parse_regex, response_str)
         if match:
             return match.group(1)
         else:
-            if len(response_str) < 40:
+            if len(response_str) < 200:
                 return response_str
             else:
-                return None
+                return ""
 
     def predict_rollout(self, rollout: Rollout):
-        formatted_query = self.prefix.format(goal=rollout.goal, state=rollout["trajectory"].state()[-1])
+        formatted_query = "\n".join(self.prefix).format(goal=rollout.goal, state=rollout["trajectory"].state()[-1])
         response = self.predict(formatted_query)
         return self.parse(response), response, formatted_query
 
     def predict_state(self, goal: str, state: str):
-        formatted_query = self.prefix.format(goal=goal, state=state)
+        formatted_query = "\n".join(self.prefix).format(goal=goal, state=state)
         print(formatted_query)
         response = self.predict(formatted_query)
         return self.parse(response), response, formatted_query
@@ -85,9 +137,6 @@ agent_registry = {
 }
 
 class TransformerAgent(Agent):
-
-    learning_trajectory = []
-    rollouts = []
     
     def __init__(self, agent_goal:str, device=-1):
         self.device = torch.device('cpu') if device == -1 else torch.device('cuda')
@@ -111,10 +160,6 @@ class TransformerAgent(Agent):
         torch.cuda.empty_cache()
         self.generator = pipeline('text-generation', model=path, tokenizer='openai-gpt', device=self.device_no)
 
-    def reset_state(self, goal, scores):
-        self.rollouts.append(Rollout(self.learning_trajectory, goal, scores))
-        self.learning_trajectory = []
-
     def parse_action(self, generated_text: str, prefix: str):
         split_text = generated_text[len(prefix):]
         return split_text.split(']')[0].strip()
@@ -122,17 +167,14 @@ class TransformerAgent(Agent):
     def predict_sequence(self, prompt: str):
         return self.generator(prompt)[0]["generated_text"]
 
-    def append_state(self, action):
-        self.learning_trajectory.append(["", self.agent_goal, action])
-    
     def predict(self, prompt: str, rollout: Rollout):
-        self.append_state("predict_rollout")
         prompt = str(rollout["trajectory"]) + f'state: [{prompt}] action: [ '
-        if False:
+        if True:
             prediction = self.predict_sequence(prompt)
             action = self.parse_action(prediction, prompt)
         else:
             prediction = GPT3Agent().predict(prompt)
+            # TODO: separate these.
             action = WhatCanIDo().parse(prediction)
         return action, prediction
 
@@ -162,32 +204,13 @@ class TransformerAgent(Agent):
         )
         trainer.train()
         trainer.save_model()
-
-    def build_game(self, world_size: float, seed: int = None) -> str:
-        """Builds a text-world game at a specific difficulty level, returning the game name."""
-        self.append_state(f"build_game: world_size: {world_size} seed: {seed}")
-        if not seed:
-            seed = random.randint(0, 100000)
-        name = f"grounding_game_{world_size}_{seed}.z8"
-        subprocess.check_output(
-            ["tw-make", "custom", "--world-size", str(world_size), "--nb-objects", "4", "--quest-length", "1", "--seed",
-             str(seed), "--output", f"tw_games/{name}"])
-        return name
-
-    def write_rollouts(self, rollouts: List[Rollout], game: str):
-        # write the rollouts data out to pickled versions and flat files for training.
-        pickle_path = f"ttm/data/rollouts_{game}.pkl"
-        txt_path = f"ttm/data/rollouts_{game}.txt"
-        self.append_state(f"write_rollouts: {txt_path}")
-        with open(pickle_path, "wb") as f:
-            pickle.dump(rollouts, f)
-        data.write_rollouts_text(pickle_path, txt_path)
-        return txt_path
     
 class HumanAgent(Agent):
         
     def predict(self, prompt: str, rollout: Rollout):
         print(prompt)
         return input("> "), "unused_prediction"
+
+
         
 

@@ -1,3 +1,4 @@
+import argparse
 import random
 import re
 import subprocess
@@ -7,7 +8,7 @@ import textworld.gym
 import time
 import pickle
 
-from agent import TransformerAgent, HumanAgent
+from agent import TransformerAgent, HumanAgent, WhatCanIDo
 from trajectory import Trajectory, Rollout, Goal
 
 import pdb, sys
@@ -40,17 +41,17 @@ def metalearn(agent, max_train_epochs=1):
         agent.train("ttm/gpt2-metalearn", rollout_path, rollout_path)
         train_epochs += 1
 
-def get_metalearning_action(agent, metalearn_goal):
-    agent.load_inference("ttm/gpt2-metalearn")
-    obs = ""
-    action = agent.predict(obs, Rollout(agent.learning_trajectory, metalearn_goal, []))
-    return action
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--policy", default="general", help="Policy used as a suffix for the filename")
+args = parser.parse_args()
+policy = args.policy
 
 agent_goal = "score = 10000"
 metalearn_prefix = "metalearn: "
 metalearn_goal = metalearn_prefix + agent_goal
 
-agent = TransformerAgent(agent_goal, device=0)
+agent = HumanAgent(agent_goal, device=0)
 
 max_train_epochs = 20
 train_epochs = 0
@@ -80,14 +81,14 @@ while train_epochs < max_train_epochs:
         scores = []
         rollout = Rollout(trajectory, goal, scores)
         while not done and actions < max_actions:
-            #metalearn_action, metalearn_prediction = get_metalearning_action(agent, metalearn_goal)
-            metalearn_action = "predict"
+            rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
+            metalearn_action = agent.get_metalearning_action(HumanAgent(metalearn_goal), obs, rollout)
             print(f"metalearn action >>>> {metalearn_action} <<<<")
-            if train_epochs == 0:
-                agent.load_inference("ttm/gpt2-rollout")
-            else:
-                agent.load_inference("ttm/gpt2-rollout-post")
             if re.match(r".*predict.*", metalearn_action):
+                if train_epochs == 0:
+                    agent.load_inference("ttm/gpt2-rollout")
+                else:
+                    agent.load_inference("ttm/gpt2-rollout-post")
                 command, prediction = agent.predict(obs, rollout)
                 trajectory.append([obs, goal, command])
                 obs, score, done, infos = env.step(command)
@@ -95,9 +96,14 @@ while train_epochs < max_train_epochs:
                 scores.append(score)
                 print(scores)
                 env.render()
-                actions += 1
+            elif re.match(r".*whatcanido.*", metalearn_action):
+                query_agent = WhatCanIDo(metalearn_goal)
+                trajectory.append([obs, goal, "whatcanido"])
+                what_can_i_do, response, formatted_query = query_agent.predict_state(goal, obs)
+                obs += " " + what_can_i_do
+                print(obs)
         rollouts.append(rollout)
-    rollout_path = agent.write_rollouts(rollouts, game)
+    rollout_path = agent.write_rollouts(rollouts, game, policy)
     if train_epochs == 0:
         agent.load_model("ttm/gpt2-rollout")
     else:

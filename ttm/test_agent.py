@@ -11,7 +11,7 @@ import pickle
 from agent import agent_registry
 
 def query(agent:str, prompt: str=None, goal: str=None, state: str=None):
-  agent = agent_registry[agent]()
+  agent = agent_registry[agent](agent_goal="score = 10000")
   print(agent)
   if prompt:
     return agent.predict(prompt)
