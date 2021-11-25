@@ -1,4 +1,4 @@
-New example:
+First example:
 Goal [ Close the trunk ]
 State [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
 and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
@@ -8,24 +8,15 @@ State [ the workbench looks normal ]
 Action [ query: what can I do? ]
 Answer [ You can open and close the trunk. You can look at the workbench. ]
 
-New example:
+New example with a different query:
 Goal [ Get the camera ]
 State [ You're in a room with a window. There's a camera on the window. ]
-Action [ query: what can I do? ]
-Answer [ You can take the camera ]
+Action [ query: what should I do? ]
+Answer [ Take the camera ]
 
-New example:
-Goal [ Take the key ]
+New example with a different query:
+Goal [ Take the key. ]
 State [ You're in a room. There is a bookshelf and a key sitting on it. ]
 Action [ predict: look workbench ]
 State [ You can see no such thing. ]
-Action [ query: what can I do? ]
-Answer [ You can take the key. ]
-
-New example:
-Goal [ {goal} ]
-State [ {state0} ]
-Action [ {action0} ]
-State [ {state1} ]
-Action [ query: what can I do? ]
-Answer [
+Action [ query:

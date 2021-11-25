@@ -62,11 +62,17 @@ class Agent:
 
     def write_rollouts(self, rollouts: List[Rollout], game: str, policy: str):
         # write the rollouts data out to pickled versions and flat files for training.
-        pickle_path = f"ttm/data/rollouts_{game}_{policy}.pkl"
-        txt_path = f"ttm/data/rollouts_{game}_{policy}.txt"
+        pickle_path = f"ttm/data/{policy}/grounding_data.pkl"
+        txt_path = f"ttm/data/{policy}/grounding_data"
         self.append_state(f"write_rollouts: {txt_path}")
+        if os.path.exists(pickle_path):
+            with open(pickle_path, 'rb') as f:
+                old_rollouts = pickle.load(f)
+        else:
+            old_rollouts = {}
+        old_rollouts.update({game: rollouts})
         with open(pickle_path, "wb") as f:
-            pickle.dump(rollouts, f)
+            pickle.dump(old_rollouts, f)
         data.write_rollouts_text(pickle_path, txt_path)
         return txt_path
 
@@ -85,6 +91,7 @@ class GPT3Agent(Agent):
     parse_regex: str = None
 
     def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
+        self.path = path
         for param in ["prefix", "motivating_examples", "grounding_data"]:
             with open(os.path.join(path, param), "r") as f:
                 self.__dict__[param] = [l.strip() for l in f.readlines()]
@@ -98,15 +105,25 @@ class GPT3Agent(Agent):
         openai.api_key = os.getenv("OPENAI_API_KEY")
         print("PROMPT>>>>")
         print(prompt)
-        response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=500)
+        max_tokens = 100 # 500
+        response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=max_tokens)
         print("RESPONSE>>>>")
         print(response)
         return response
 
+    def save(self, path: str="ttm/data/whatcanido") -> str:
+        for param in ["prefix", "motivating_examples", "grounding_data"]:
+            with open(os.path.join(path, param), "w") as f:
+                f.writelines(self.__dict__[param])
+        for param in ["name", "parse_regex"]:
+            with open(os.path.join(path, param), "w") as f:
+                f.write(self.__dict__[param])
+        return path
+
     def __str__(self):
         return pprint.pformat(self.__dict__)
 
-class WhatCanIDo(GPT3Agent):
+class MetalearnedAgent(GPT3Agent):
 
     def parse(self, response: str):
         response_str = response["choices"][0]["text"]
@@ -121,7 +138,20 @@ class WhatCanIDo(GPT3Agent):
                 return ""
 
     def predict_rollout(self, rollout: Rollout):
-        formatted_query = "\n".join(self.prefix).format(goal=rollout.goal, state=rollout["trajectory"].state()[-1])
+        # whatshouldido format - temporary hack to get this to work. tbd: write this as a flat file and get Codex to
+        # generate an inference loop.
+        if self.path == "ttm/data/whatshouldido/":
+            state0 = rollout["trajectory"].states()[-2] if len(rollout["trajectory"]) > 1 else ""
+            action0 = rollout["trajectory"].actions()[-2] if len(rollout["trajectory"]) > 1 else ""
+            formatted_query = "\n".join(self.prefix).format(goal=rollout["goal"], state1=rollout["trajectory"].states()[-1],
+                                                            state0=state0, action0=action0)
+        elif self.path == "ttm/data/agent/":
+            rollout_inference_st = rollout.inference_str()
+            formatted_query = "\n".join(self.prefix).format(rollout=rollout_inference_st)
+        elif self.path == "ttm/data/new_question_policy/":
+            formatted_query = "\n".join(self.prefix)
+        else:
+            raise Exception(f"Unknown path for agent data {self.path}")
         response = self.predict(formatted_query)
         return self.parse(response), response, formatted_query
 
@@ -132,11 +162,11 @@ class WhatCanIDo(GPT3Agent):
         return self.parse(response), response, formatted_query
 
 agent_registry = {
-    "whatcanido": WhatCanIDo,
+    "metalearned": MetalearnedAgent,
     "gpt3": GPT3Agent
 }
 
-class TransformerAgent(Agent):
+class TransformerAgent(MetalearnedAgent):
     
     def __init__(self, agent_goal:str, device=-1):
         self.device = torch.device('cpu') if device == -1 else torch.device('cuda')
@@ -170,7 +200,7 @@ class TransformerAgent(Agent):
     def predict(self, prompt: str, rollout: Rollout):
         prompt = str(rollout["trajectory"]) + f'state: [{prompt}] action: [ '
         if True:
-            prediction = self.predict_sequence(prompt)
+            prediction = self.predict_rollout(rollout)
             action = self.parse_action(prediction, prompt)
         else:
             prediction = GPT3Agent().predict(prompt)

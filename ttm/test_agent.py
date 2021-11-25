@@ -8,17 +8,19 @@ import textworld.gym
 import time
 import pickle
 
-from agent import agent_registry
+from agent import MetalearnedAgent
+from trajectory import Rollout, Trajectory
 
-def query(agent:str, prompt: str=None, goal: str=None, state: str=None):
-  agent = agent_registry[agent](agent_goal="score = 10000")
+def query(path:str, prompt: str=None, goal: str=None, state: str=None):
+  agent = MetalearnedAgent(agent_goal="score=10000", path=path)
   print(agent)
   if prompt:
     return agent.predict(prompt)
   elif goal and state:
     return agent.predict_state(goal, state)
-  else:
-    raise Exception("Must provide either prompt or goal and state")
+  else: # use the built-in prompt
+    print("predicting rollout")
+    return agent.predict_rollout(Rollout(Trajectory(), "", []))
 
 
 
@@ -27,6 +29,6 @@ if __name__ == "__main__":
   parser.add_argument("--prompt", type=str, default=None, help="Prompt to use for testing")
   parser.add_argument("--goal", type=str, default=None, help="Goal to use for testing")
   parser.add_argument("--state", type=str, default=None, help="State to use for testing")
-  parser.add_argument("--agent", type=str, default="whatcanido", help="agent classname")
+  parser.add_argument("--path", type=str, default="ttm/data/new_question_policy/", help="path to agent data files")
   args = parser.parse_args()
-  print(query(args.agent, args.prompt, args.goal, args.state))
+  print(query(args.path, args.prompt, args.goal, args.state))

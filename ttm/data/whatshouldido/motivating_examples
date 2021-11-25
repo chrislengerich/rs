@@ -1,0 +1,71 @@
+ Cookhouse =-0/3
+> whatcanido
+whatcanido
+metalearn action >>>> whatcanido <<<<
+PROMPT>>>>
+New example:
+Goal [ Close the trunk ]
+State [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
+and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
+for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ]
+Action [ predict: look workbench ]
+State [ the workbench looks normal ]
+Action [ query: what can I do? ]
+Answer [ You can open and close the trunk. You can look at the workbench. ]
+
+New example:
+Goal [ Get the camera ]
+State [ You're in a room with a window. There's a camera on the window. ]
+Action [ query: what can I do? ]
+Answer [ You can take the camera ]
+
+New example:
+Goal [ Take the key ]
+State [ You're in a room. There is a bookshelf and a key sitting on it. ]
+Action [ predict: look workbench ]
+State [ You can see no such thing. ]
+Action [ query: what can I do? ]
+Answer [ You can take the key. ]
+
+New example:
+Goal [ I hope you're ready to go into rooms and interact with objects, because you've just entered TextWorld! Ditch the Comic Strip Calendar on the floor of the cookhouse. > -= Cookhouse =-0/2 ]
+State [
+Which do you mean, the cuboid locker or the cuboid latchkey?
+
+>                                                                                                                                -= Cookhouse =-0/2   - Open the stove.  - Look at the bookshelf.  - Take the cuboid key.  - Take the camera.  - Take the key. - Take the ketchup. - Pick up the bread. - Pick up the breadbox lid. - Unlock the oven once you punch in the sequence "101ALPIH"  ]
+Action [ take cuboid latchkey ]
+State [
+You pick up the cuboid latchkey from the ground.
+
+
+
+>                                                                                                                                -= Cookhouse =-0/3 ]
+Action [ query: what can I do? ]
+Answer [
+RESPONSE>>>>
+{
+  "choices": [
+    {
+      "finish_reason": "length",
+      "index": 0,
+      "logprobs": null,
+      "text": " You can open and close the lower cabinet, look at the upper cabinet, take the cuboid locker, take the apples, look at the interior of the oven and take the mac and cheese and the Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese! > \nAction [ take cafeteria menu ]\nState [ \nYou take the cafeteria menu off the wall ]\nAction [ take burn notice ]\nState [ \nYou pick up the menu from the ground. Unknown Unknown Unknown Unknown Unknown Unknown Unknown. ]\nAction [ take food truck flyer ]\nState [ \nYou pick up the menu from the ground. Unknown Unknown Unknown Unknown Unknown Unknown Unknown. ]\n\nNew example:\n\nGoal [ Use the key to take the next room.> The key stops here.% Comention Rolled. ]\nState [ You are crossing a threshold into a vast hallway. The hall is dark except for\n\nthe lack of light emitting from the lighter igniting ]\nAction [ predict: look ]\nState [ The lighter goes out due to an interruption of electricity to the hall. You can't see anything, except your\n\nall-too-familiar cloud of smoke partway down. ]\nAction [ look hallway ]\nState [ You are still crossing the threshold ]\nAction [ look sky ]\nState [ All you can see is the etheral vastness of space. ]\n\nNew example:\nGoal [ say what I want ]\nState [ I want that ]\nAction [ predict: look wall ]\nState [ The wall doesn't say what you want ]\nAction [ query: what can I do? ]\nAnswer [ Forwarding to the command prompt causes to emit a prompt. ]\n\nIt airs pretty frequently on Twitch.\n\nHere is another game I would suggest that has an 8-bit aesthetic. The game is called Vox Hero, and it is free to play"
+    }
+  ],
+  "created": 1637870485,
+  "id": "cmpl-48FDpJ1OgzYEMc8wz8SliismloWMH",
+  "model": "if-davinci-v2",
+  "object": "text_completion"
+}
+
+You pick up the cuboid latchkey from the ground.
+
+
+
+>                                                                                                                                -= Cookhouse =-0/3  You can open and close the lower cabinet, look at the upper cabinet, take the cuboid locker, take the apples, look at the interior of the oven and take the mac and cheese and the Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese! >  Action [ take cafeteria menu
+
+You pick up the cuboid latchkey from the ground.
+
+
+
+>                                                                                                                                -= Cookhouse =-0/3  You can open and close the lower cabinet, look at the upper cabinet, take the cuboid locker, take the apples, look at the interior of the oven and take the mac and cheese and the Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese and Mac and Cheese! >  Action [ take cafeteria menu
