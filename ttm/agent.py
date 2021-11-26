@@ -92,32 +92,53 @@ class GPT3Agent(Agent):
 
     def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
         self.path = path
-        for param in ["prefix", "motivating_examples", "grounding_data"]:
-            with open(os.path.join(path, param), "r") as f:
-                self.__dict__[param] = [l.strip() for l in f.readlines()]
-        for param in ["name", "parse_regex"]:
-            with open(os.path.join(path, param), "r") as f:
-                self.__dict__[param] = [l.strip().replace('\\\\', '\\') for l in f.readlines()][0]
+        if path:
+            for param in ["prefix", "motivating_examples", "grounding_data"]:
+                with open(os.path.join(path, param), "r") as f:
+                    self.__dict__[param] = [l.strip() for l in f.readlines()]
+            for param in ["name", "parse_regex"]:
+                with open(os.path.join(path, param), "r") as f:
+                    self.__dict__[param] = [l.strip().replace('\\\\', '\\') for l in f.readlines()][0]
+            for param in ["length"]:
+                with open(os.path.join(path, param), "r") as f:
+                    self.__dict__[param] = int(f.readlines()[0].strip())
         super().__init__(agent_goal, device)
+
+    def build_name(self, name:str):
+        return re.sub('[\s\?\!]', '', name.lower())
+
+    def load_agent(self, prefix: List[str], motivating_examples: List[str], grounding_data: List[str], name: str,
+        length: int, parse_regex:str = "([^]]*)\].*)"):
+        self.prefix = prefix
+        self.motivating_examples = motivating_examples
+        self.grounding_data = grounding_data
+        self.name = self.build_name(name)
+        self.parse_regex = parse_regex
+        self.length = length
+        self.path = f"ttm/data/{self.name}"
 
     def predict(self, prompt: str):
         """Dispatches a query to GPT-3."""
         openai.api_key = os.getenv("OPENAI_API_KEY")
         print("PROMPT>>>>")
         print(prompt)
-        max_tokens = 100 # 500
+        max_tokens = self.length # 100 # 500
         response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=max_tokens)
         print("RESPONSE>>>>")
         print(response)
         return response
 
-    def save(self, path: str="ttm/data/whatcanido") -> str:
+    def save(self, path: str=None) -> str:
+        if path == None:
+            path = self.path
+        if not os.path.exists(path):
+            os.mkdir(path)
         for param in ["prefix", "motivating_examples", "grounding_data"]:
             with open(os.path.join(path, param), "w") as f:
                 f.writelines(self.__dict__[param])
-        for param in ["name", "parse_regex"]:
+        for param in ["name", "parse_regex", "length"]:
             with open(os.path.join(path, param), "w") as f:
-                f.write(self.__dict__[param])
+                f.write(str(self.__dict__[param]))
         return path
 
     def __str__(self):
@@ -125,7 +146,7 @@ class GPT3Agent(Agent):
 
 class MetalearnedAgent(GPT3Agent):
 
-    def parse(self, response: str):
+    def parse(self, response: str) -> str:
         response_str = response["choices"][0]["text"]
         response_str = response_str.replace("\n", " ")
         match = re.match(self.parse_regex, response_str)
@@ -149,11 +170,37 @@ class MetalearnedAgent(GPT3Agent):
             rollout_inference_st = rollout.inference_str()
             formatted_query = "\n".join(self.prefix).format(rollout=rollout_inference_st)
         elif self.path == "ttm/data/new_question_policy/":
-            formatted_query = "\n".join(self.prefix)
+            rollout_inference_st = rollout.inference_str()
+            formatted_query = "\n".join(self.prefix).format(rollout=rollout_inference_st)
+        elif self.path == "ttm/data/new_prefix_policy/":
+            rollout_inference_st = rollout.inference_str()
+            question = rollout["trajectory"].states()[-1]
+            formatted_query = "\n".join(self.prefix).format(rollout=rollout_inference_st, question=question)
         else:
-            raise Exception(f"Unknown path for agent data {self.path}")
+            print(f"Unknown path for agent data {self.path}")
+            formatted_query = "\n".join(self.prefix)
         response = self.predict(formatted_query)
         return self.parse(response), response, formatted_query
+
+    def compress(self, rollouts: dict):
+        # Learned policy for compression.
+        # stub method to be replaced by a learned policy.
+        return list(rollouts.values())[0]
+
+    def cognitive_dissonance(self, rollouts: dict):
+        # Returns a signal corresponding to cognitive dissonance of the past trajectory, which triggers the synthesis
+        # of a new learning behavior which is parameterized by a name and a handful of examples (can be thought of as
+        # changing weights (slow learning) or training data (fast change).
+        # This is a hard-coded version of a function that we would like to learn.
+
+        # want: write out a compressed version of the problem, parameterized by the current set of rollouts.
+        rollout = list(rollouts.values())[0][0]
+        if rollout["scores"][-1] < 1000: # TBD -> rollouts[0][-1][1]:
+            action = "new_question_policy"
+        else:
+            action = "predict"
+        #rollout = self.compress(rollouts)
+        return action, rollout
 
     def predict_state(self, goal: str, state: str):
         formatted_query = "\n".join(self.prefix).format(goal=goal, state=state)

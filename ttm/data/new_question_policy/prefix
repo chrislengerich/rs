@@ -1,8 +1,5 @@
 First example:
-Goal [ Close the trunk ]
-State [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
-and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
- for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ]
+{rollout}
 
 What questions are useful to ask to achieve the goal in this state?
 [ What can I do? ]
