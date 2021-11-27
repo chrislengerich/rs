@@ -4,7 +4,7 @@ New example:
 goal: [Close the trunk]
 step 0 state: [You've just walked into a spare room. The room is well lit. You smell an interesting smell,
 and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
- for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it.] action: [look workbench]
+for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it.] action: [look workbench]
 step 1 state: [the workbench looks normal] action: [query: what can I do?]
 step 2 state: [query_answer: You can open and close the trunk. You can look at the workbench.] action: [open trunk]
 
@@ -19,7 +19,7 @@ New example:
 goal: [ Welcome to Textworld! Your goal now to find a way to close the trunk ]
 step 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
 and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
- for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]
+for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]
 step 1 state: [ the workbench looks normal ] action: [ query: what should I do? ]
 step 2 state: [ query_answer: You should close the trunk ] action: [ close trunk ]
 
@@ -28,5 +28,5 @@ goal: [ Get the camera ]
 step 0 state: [ You're in a room with a window. There's a camera on the window. ] action [ query: what should I do? ]
 step 1 state: [ query_answer: Take the camera ] action: [ You take the camera. ]
 
-A couple examples for the question: {question}
+A couple examples for the question: what would happen?
 >>>>>>>>>>>>
