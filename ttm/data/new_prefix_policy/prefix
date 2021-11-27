@@ -28,5 +28,5 @@ goal: [ Get the camera ]
 step 0 state: [ You're in a room with a window. There's a camera on the window. ] action [ query: what should I do? ]
 step 1 state: [ query_answer: Take the camera ] action: [ You take the camera. ]
 
-A couple examples for the question: {question}
+A couple examples for the question: "{question}"
 >>>>>>>>>>>>

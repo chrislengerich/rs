@@ -1,0 +1,8 @@
+goal: [You make out a closed cabinet] step 0 state: [] action: [start] || step 1 state: [You make out a closed cabinet] action: [whatshouldido] || 
+goal: [You make out a closed cabinet] step 0 state: [] action: [start] || step 1 state: [You make out a closed cabinet] action: [whatshouldido] || step 2 state: [You make out a closed cabinet] action: [throw the textbook] || 
+goal: [You can see a freezer] step 0 state: [] action: [start] || step 1 state: [You can see a freezer] action: [whatshouldido] || 
+goal: [You can see a freezer] step 0 state: [] action: [start] || step 1 state: [You can see a freezer] action: [whatshouldido] || step 2 state: [You can see a freezer] action: [close freezer] || 
+goal: [There is a mug and a shadfly on the floor] step 0 state: [] action: [start] || step 1 state: [There is a mug and a shadfly on the floor] action: [whatshouldido] || 
+goal: [There is a mug and a shadfly on the floor] step 0 state: [] action: [start] || step 1 state: [There is a mug and a shadfly on the floor] action: [whatshouldido] || step 2 state: [There is a mug and a shadfly on the floor] action: [pick up mug] || 
+goal: [You can see a mantelpiece] step 0 state: [] action: [start] || step 1 state: [You can see a mantelpiece] action: [whatshouldido] || 
+goal: [You can see a mantelpiece] step 0 state: [] action: [start] || step 1 state: [You can see a mantelpiece] action: [whatshouldido] || step 2 state: [You can see a mantelpiece] action: [pick up shadfly] || 

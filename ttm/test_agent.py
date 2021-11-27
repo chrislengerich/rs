@@ -20,7 +20,9 @@ def query(path:str, prompt: str=None, goal: str=None, state: str=None):
     return agent.predict_state(goal, state)
   else: # use the built-in prompt
     print("predicting rollout")
-    return agent.predict_rollout(Rollout(Trajectory(), "", []))
+    blank_trajectory = Trajectory()
+    blank_trajectory.append([state, "", ""])
+    return agent.predict_rollout(Rollout(blank_trajectory, "", []))
 
 
 

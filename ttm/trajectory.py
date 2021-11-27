@@ -23,11 +23,11 @@ class Trajectory(list):
         return [i[2] for i in self]
 
     def suffix(self):
-        return "] || "
+        return "] \n"
     
     def __str__(self):
         goal = str(self.goals()[0])
-        string_repr = f"goal: [{goal}] "
+        string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
             state = re.sub("[\n\t ]+", " ", state)
             string_repr += f"step {i} state: [{state}] action: [{action.strip()}{self.suffix()}"

@@ -44,15 +44,16 @@ def metalearn(agent, max_train_epochs=1):
         agent.train("ttm/gpt2-metalearn", rollout_path, rollout_path)
         train_epochs += 1
 
-def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"]):
+def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str=""):
     """Builds a game and run rollouts in that game"""
-    game = agent.build_game(1)
+    game = agent.build_game(1, 1000)
     env = setup_game(game)
     goal = get_goal(env)
     print(f"goal is '{goal}'")
     max_actions = 2  # 3
     max_rollouts = 1  # 10
     rollouts = []
+    known_policies = sorted(known_policies, key=len, reverse=True)
     while len(rollouts) < max_rollouts:
         obs, infos = env.reset()  # Start new episode.
         # env.render()
@@ -67,7 +68,10 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         while not done and actions < max_actions:
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
             trajectory.append([obs, goal, "blank"])
-            metalearn_action, full_action, formatted_query = agent.predict_rollout(rollout)
+            if new_policy != "" and actions == 0:
+                metalearn_action = new_policy
+            else:
+                metalearn_action, full_action, formatted_query = agent.predict_rollout(rollout)
             # agent.get_metalearning_action(
             # HumanAgent(metalearn_goal), obs, metalearn_rollout)
             print(f"metalearn action >>>> {metalearn_action} <<<<")
@@ -81,13 +85,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                     print(obs)
                     assert not matched
                     matched = True
-            if not matched: # default is predict and take an action.
-                # re.match(r".*predict.*", metalearn_action):
-                # if train_epochs == 0:
-                #     agent.load_inference("ttm/gpt2-rollout")
-                # else:
-                #     agent.load_inference("ttm/gpt2-rollout-post")
-                # command, prediction = agent.predict_rollout(rollout)
+            if not matched:
                 command = metalearn_action
                 trajectory[-1][-1] = command
                 obs, score, done, infos = env.step(command)
@@ -95,6 +93,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 scores.append(score)
                 print(scores)
                 env.render()
+            actions += 1
         rollouts.append(rollout)
     return agent.write_rollouts(rollouts, game, policy)
 
@@ -116,12 +115,13 @@ train_epochs = 0
 # Meta-learning agent.
 # Currently uses a fixed policy to achieve its objective.
 while train_epochs < max_train_epochs:
-    #rollout_path = run_rollouts(agent, args.policy)
-    rollouts = data.read_rollouts(rollout_path)
+    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy)
+    rollouts = data.read_rollouts(rollout_pickle_path)
 
     # metalearning loop.
     action, compressed_rollout = agent.cognitive_dissonance(rollouts)
     trajectory = compressed_rollout["trajectory"]
+    new_agent = None
     while action != "predict":
         if re.match(r".*new_question_policy.*", action):
             new_question_agent = MetalearnedAgent(metalearn_goal, path="ttm/data/new_question_policy/")
@@ -139,7 +139,8 @@ while train_epochs < max_train_epochs:
             compressed_rollout["trajectory"].append([f"new_prefix: {new_agent.name}", metalearn_goal, "train_grounding"])
             print(compressed_rollout)
         elif re.match(r".*train_grounding.*", action):
-            run_rollouts(agent, new_agent.name, known_policies=["whatcanido", "whatshouldido"] + [new_agent.name])
+            run_rollouts(agent, new_agent.name, known_policies=["whatcanido", "whatshouldido"] + [new_agent.name],
+                         new_policy=new_agent.name)
             compressed_rollout["trajectory"].append([f"ran rollouts", metalearn_goal, "cognitive_dissonance"])
         action = compressed_rollout["trajectory"].actions()[-1]
 

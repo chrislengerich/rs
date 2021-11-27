@@ -74,7 +74,7 @@ class Agent:
         with open(pickle_path, "wb") as f:
             pickle.dump(old_rollouts, f)
         data.write_rollouts_text(pickle_path, txt_path)
-        return txt_path
+        return txt_path, pickle_path
 
     def get_metalearning_action(self, agent, obs, rollout):
         agent.load_inference("ttm/gpt2-metalearn")
@@ -108,11 +108,11 @@ class GPT3Agent(Agent):
         return re.sub('[\s\?\!]', '', name.lower())
 
     def load_agent(self, prefix: List[str], motivating_examples: List[str], grounding_data: List[str], name: str,
-        length: int, parse_regex:str = "([^]]*)\].*)"):
+        length: int, parse_regex:str = "([^]]*)\].*"):
         self.prefix = prefix
         self.motivating_examples = motivating_examples
         self.grounding_data = grounding_data
-        self.name = self.build_name(name)
+        self.name = "new_" + self.build_name(name)
         self.parse_regex = parse_regex
         self.length = length
         self.path = f"ttm/data/{self.name}"

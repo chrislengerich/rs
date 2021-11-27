@@ -29,7 +29,7 @@ goal: [ Get the camera ]
 step 0 state: [ You're in a room with a window. There's a camera on the window. ] action [ query: what should I do? ]
 step 1 state: [ query_answer: Take the camera ] action: [ You take the camera. ]
 
-A couple examples for the question: what would happen?
+A couple examples for the question: "what would happen?"
 >>>>>>>>>>>>
 RESPONSE>>>>
 {
@@ -38,11 +38,18 @@ RESPONSE>>>>
       "finish_reason": "stop",
       "index": 0,
       "logprobs": null,
-      "text": "\nNew example:\ngoal: [ Close the trunk ]\nStep 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,\nand follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking\nfor a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ]\nStep 1 state: [ the workbench looks normal ]\nAction: [ query: What would happen? ]\nStep 2 state: [ query_answer: Nothing ]\nAction: [ close trunk ]\n\nNew example:\ngoal: [ Get the camera ]\nStep 0 state: [ You're in a room with a window. There's a camera on the window. ]\nAction [ query: What would happen? ]\nStep 1 state: [ query_answer: You get the camera. ]\nAction: [ You get the camera. ]"
+      "text": ">\nNew example:\ngoal: [ Close the trunk ]\nstep 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell, and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]\nstep 1 state: [ the workbench looks normal ] action: [query: what would happen?]\nstep 2 state: [ query_answer: Nothing happens ]"
     }
   ],
-  "created": 1638032700,
-  "id": "cmpl-48vQCThiVkVaFrEjUU409YYkDXpUZ",
+  "created": 1638034916,
+  "id": "cmpl-48vzwwehfQ2VV7HGl6gXoB3mJ607n",
   "model": "if-davinci-v2",
   "object": "text_completion"
 }
+('', <OpenAIObject text_completion id=cmpl-48vzwwehfQ2VV7HGl6gXoB3mJ607n at 0x7ff3c49044d0> JSON: {
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "text": ">\nNew example:\ngoal: [ Close the trunk ]\nstep 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell, and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]\nstep 1 state: [ the workbench looks normal ] action: [query: what would happen?]\nstep 2 state: [ query_answer: Nothing happens ]"
