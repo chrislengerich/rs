@@ -105,7 +105,7 @@ class GPT3Agent(Agent):
         super().__init__(agent_goal, device)
 
     def build_name(self, name:str):
-        return re.sub('[\s\?\!]', '', name.lower())
+        return re.sub('[^a-z]', '', name.lower())
 
     def load_agent(self, prefix: List[str], motivating_examples: List[str], grounding_data: List[str], name: str,
         length: int, parse_regex:str = "([^]]*)\].*"):
