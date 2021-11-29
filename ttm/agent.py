@@ -161,24 +161,24 @@ class MetalearnedAgent(GPT3Agent):
     def predict_rollout(self, rollout: Rollout):
         # whatshouldido format - temporary hack to get this to work. tbd: write this as a flat file and get Codex to
         # generate an inference loop.
+        rollout_state_str = rollout["trajectory"].state_inference_str()
+        rollout_action_str = rollout["trajectory"].action_inference_str()
         if self.path == "ttm/data/whatshouldido/":
             state0 = rollout["trajectory"].states()[-2] if len(rollout["trajectory"]) > 1 else ""
             action0 = rollout["trajectory"].actions()[-2] if len(rollout["trajectory"]) > 1 else ""
             formatted_query = "\n".join(self.prefix).format(goal=rollout["goal"], state1=rollout["trajectory"].states()[-1],
                                                             state0=state0, action0=action0)
         elif self.path == "ttm/data/agent/":
-            rollout_inference_st = rollout.inference_str()
-            formatted_query = "\n".join(self.prefix).format(rollout=rollout_inference_st)
+            formatted_query = "\n".join(self.prefix).format(rollout=rollout_action_str)
         elif self.path == "ttm/data/new_question_policy/":
-            rollout_inference_st = rollout.inference_str()
-            formatted_query = "\n".join(self.prefix).format(rollout=rollout_inference_st)
+            formatted_query = "\n".join(self.prefix).format(rollout=rollout_action_str)
         elif self.path == "ttm/data/new_prefix_policy/":
-            rollout_inference_st = rollout.inference_str()
             question = rollout["trajectory"].states()[-1]
-            formatted_query = "\n".join(self.prefix).format(rollout=rollout_inference_st, question=question)
+            formatted_query = "\n".join(self.prefix).format(rollout=rollout_action_str, question=question)
         else:
             print(f"Unknown path for agent data {self.path}")
-            formatted_query = "\n".join(self.prefix)
+
+            formatted_query = "\n".join(self.prefix).format(rollout_state_str=rollout_state_str, rollout_action_str=rollout_action_str)
         response = self.predict(formatted_query)
         return self.parse(response), response, formatted_query
 

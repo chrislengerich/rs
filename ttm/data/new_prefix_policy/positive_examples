@@ -53,3 +53,61 @@ RESPONSE>>>>
       "index": 0,
       "logprobs": null,
       "text": ">\nNew example:\ngoal: [ Close the trunk ]\nstep 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell, and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]\nstep 1 state: [ the workbench looks normal ] action: [query: what would happen?]\nstep 2 state: [ query_answer: Nothing happens ]"
+
+PROMPT>>>>
+A couple examples for the question: "what can I do?"
+>>>>>>>>>>>>
+New example:
+goal: [Close the trunk]
+step 0 state: [You've just walked into a spare room. The room is well lit. You smell an interesting smell,
+and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
+for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it.] action: [look workbench]
+step 1 state: [the workbench looks normal] action: [query: what can I do?]
+step 2 state: [query_answer: You can open and close the trunk. You can look at the workbench.] action: [open trunk]
+
+New example:
+goal: [Get the camera]
+step 0 state: [You're in a room with a window. There's a camera on the window.] action [query: what can I do?]
+step 1 state: [query_answer: You can take the camera ] action: [take camera]
+
+A couple examples for the question: "what should I do?"
+>>>>>>>>>>>>
+New example:
+goal: [ Welcome to Textworld! Your goal now to find a way to close the trunk ]
+step 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
+and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
+for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]
+step 1 state: [ the workbench looks normal ] action: [ query: what should I do? ]
+step 2 state: [ query_answer: You should close the trunk ] action: [ close trunk ]
+
+New example:
+goal: [ Get the camera ]
+step 0 state: [ You're in a room with a window. There's a camera on the window. ] action [ query: what should I do? ]
+step 1 state: [ query_answer: Take the camera ] action: [ You take the camera. ]
+
+A couple examples for the question: "what would happen?"
+>>>>>>>>>>>>
+New example:
+RESPONSE>>>>
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "text": "\ngoal: [ Close the trunk ]\nstep 0 state: [ You've just walked into a spare room. The room is well lit. There's the smell of something,\nbut you're sure it's nothing strange. The trunk is empty! This is the worst thing that could possible happen, ever! Were you looking\nfor a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it.] action: [look workbench]\nstep 1 state: [ the workbench looks normal] action: [query: what would happen?]\nstep 2 state: [query_answer: Nothing.]\n\nNew example:\ngoal: [ Get the camera ]\nstep 0 state: [ You're in a room with a window. There's a camera on the window ]\naction [ query: what would happen? ]\nstep 1 state: [ The camera's gone! ]"
+    }
+  ],
+  "created": 1638036459,
+  "id": "cmpl-48wOp39AMabMQgBgnANrs9wlrrN6e",
+  "model": "if-davinci-v2",
+  "object": "text_completion"
+}
+('', <OpenAIObject text_completion id=cmpl-48wOp39AMabMQgBgnANrs9wlrrN6e at 0x7f78a866c530> JSON: {
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "text": "\ngoal: [ Close the trunk ]\nstep 0 state: [ You've just walked into a spare room. The room is well lit. There's the smell of something,\nbut you're sure it's nothing strange. The trunk is empty! This is the worst thing that could possible happen, ever! Were you looking\nfor a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it.] action: [look workbench]\nstep 1 state: [ the workbench looks normal] action: [query: what would happen?]\nstep 2 state: [query_answer: Nothing.]\n\nNew example:\ngoal: [ Get the camera ]\nstep 0 state: [ You're in a room with a window. There's a camera on the window ]\naction [ query: what would happen? ]\nstep 1 state: [ The camera's gone! ]"
+    }

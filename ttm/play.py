@@ -133,8 +133,9 @@ while train_epochs < max_train_epochs:
             trajectory[-1][-1] = "new_prefix_policy"  # compressed version of the trace of the action.
             new_prefix, response, formatted_query = new_prefix_agent.predict_rollout(compressed_rollout)
             new_agent = MetalearnedAgent(metalearn_goal, path=None)
+            full_prefix = new_prefix.split("\n") + ["New example:", "{rollout_state_str}"]
             # TBD: let the agent generate length and a regex parser for itself.
-            new_agent.load_agent(new_prefix.split("\n"), str(compressed_rollout), [], new_question, 100)
+            new_agent.load_agent(full_prefix, str(compressed_rollout), [], new_question, 100)
             new_agent.save()
             compressed_rollout["trajectory"].append([f"new_prefix: {new_agent.name}", metalearn_goal, "train_grounding"])
             print(compressed_rollout)

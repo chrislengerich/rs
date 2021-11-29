@@ -1,31 +1,23 @@
 New example:
-Goal [ Welcome to Textworld! Your goal now to find a way to close the trunk ]
-State [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
+goal: [ Welcome to Textworld! Your goal now to find a way to close the trunk ]
+step 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
 and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
  for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ]
-Action [ predict: look workbench ]
-State [ the workbench looks normal ]
-Action [ query: what should I do? ]
-Answer [ Close the trunk. ]
+ action: [ predict: look workbench ]
+step 1 state: [ the workbench looks normal ] action: [ query: what should I do? ]
+Answer: [ Close the trunk. ]
 
 New example:
-Goal [ Get the camera ]
-State [ You're in a room with a window. There's a camera on the window. ]
-Action [ query: what should I do? ]
+goal: [ Get the camera ]
+step 0 state: [ You're in a room with a window. There's a camera on the window. ] action: [ query: what should I do? ]
 Answer [ Take the camera ]
 
 New example:
-Goal [ Take the key. ]
-State [ You're in a room. There is a bookshelf and a key sitting on it. ]
-Action [ predict: look workbench ]
-State [ You can see no such thing. ]
-Action [ query: what should I do? ]
+goal: [ Take the key. ]
+step 0 state: [ You're in a room. There is a bookshelf and a key sitting on it. ] action: [ predict: look workbench ]
+step 1 state: [ You can see no such thing. ] action: [ query: what should I do? ]
 Answer [ Take the key. ]
 
 New example:
-Goal [ {goal} ]
-State [ {state0} ]
-Action [ {action0} ]
-State [ {state1} ]
-Action [ query: what should I do? ]
+{{ rollout }} query: what should I do? ]
 Answer [

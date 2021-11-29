@@ -46,3 +46,56 @@ RESPONSE>>>>
   "model": "if-davinci-v2",
   "object": "text_completion"
 }
+
+New example:
+goal: [Close the trunk]
+step 0 state: [You've just walked into a spare room. The room is well lit. You smell an interesting smell,
+and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
+for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it.] action: [look workbench]
+step 1 state: [the workbench looks normal] action: [query: what can I do?]
+step 2 state: [query_answer: You can open and close the trunk. You can look at the workbench.] action: [open trunk]
+
+New example:
+goal: [Get the camera]
+step 0 state: [You're in a room with a window. There's a camera on the window.] action [query: what can I do?]
+step 1 state: [query_answer: You can take the camera ] action: [take camera]
+
+A couple examples for the question: "what should I do?"
+>>>>>>>>>>>>
+New example:
+goal: [ Welcome to Textworld! Your goal now to find a way to close the trunk ]
+step 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,
+and follow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen, ever! Were you looking
+for a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]
+step 1 state: [ the workbench looks normal ] action: [ query: what should I do? ]
+step 2 state: [ query_answer: You should close the trunk ] action: [ close trunk ]
+
+New example:
+goal: [ Get the camera ]
+step 0 state: [ You're in a room with a window. There's a camera on the window. ] action [ query: what should I do? ]
+step 1 state: [ query_answer: Take the camera ] action: [ You take the camera. ]
+
+A couple examples for the question: "what would happen?"
+>>>>>>>>>>>>
+RESPONSE>>>>
+{
+  "choices": [
+    {
+      "finish_reason": "length",
+      "index": 0,
+      "logprobs": null,
+      "text": "\nNew examples:\n\ngoal: [ Close the trunk ]\nstep 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,\nfollow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen. Were you looking\nfor a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]\nstep 1 state: [ the workbench looks normal ] action: [ query: what would happen if I closed the trunk? ]\nstep 2 state: [ query_answer: the trunk might be hard to open ]\n\ngoal: [ Get the camera ]\nstep 0 state: [ You're in a room with a window. There's a camera on the window ] action [ query: what would happen if I took the camera? ]\nstep 1 state: [ You take the camera ] action: [ The camera is now yours! ]\n\nNew outcome:\n\ngoal: [ Close the trunk ]\nstep 0 state: outcome: the outcome is the tree is close\n\nNew outcome:\ngoal: [ Get the camera ]\nstep 0 outcome: outcome: outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome"
+    }
+  ],
+  "created": 1638036317,
+  "id": "cmpl-48wMXIpZE1M41Dow3qzZUPDeuapbY",
+  "model": "if-davinci-v2",
+  "object": "text_completion"
+}
+('', <OpenAIObject text_completion id=cmpl-48wMXIpZE1M41Dow3qzZUPDeuapbY at 0x7eff776a44d0> JSON: {
+  "choices": [
+    {
+      "finish_reason": "length",
+      "index": 0,
+      "logprobs": null,
+      "text": "\nNew examples:\n\ngoal: [ Close the trunk ]\nstep 0 state: [ You've just walked into a spare room. The room is well lit. You smell an interesting smell,\nfollow it to a trunk. The trunk is empty! This is the worst thing that could possibly happen. Were you looking\nfor a workbench? Because look over there, it's a workbench. The workbench is normal. But there isn't a thing on it. ] action: [ look workbench ]\nstep 1 state: [ the workbench looks normal ] action: [ query: what would happen if I closed the trunk? ]\nstep 2 state: [ query_answer: the trunk might be hard to open ]\n\ngoal: [ Get the camera ]\nstep 0 state: [ You're in a room with a window. There's a camera on the window ] action [ query: what would happen if I took the camera? ]\nstep 1 state: [ You take the camera ] action: [ The camera is now yours! ]\n\nNew outcome:\n\ngoal: [ Close the trunk ]\nstep 0 state: outcome: the outcome is the tree is close\n\nNew outcome:\ngoal: [ Get the camera ]\nstep 0 outcome: outcome: outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome outcome"

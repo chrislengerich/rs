@@ -22,15 +22,27 @@ class Trajectory(list):
     def actions(self): 
         return [i[2] for i in self]
 
-    def suffix(self):
-        return "] \n"
+    def action_inference_str(self):
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = re.sub("[\n\t ]+", " ", state)
+            string_repr += f"step {i} state: [{state}] action: ["
+        return string_repr
+
+    def state_inference_str(self):
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            string_repr += f"step {i} state: ["
+        return string_repr
     
     def __str__(self):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
             state = re.sub("[\n\t ]+", " ", state)
-            string_repr += f"step {i} state: [{state}] action: [{action.strip()}{self.suffix()}"
+            string_repr += f"step {i} state: [{state}] action: [{action.strip()}]\n"
         return string_repr
 
 class Rollout(dict):
@@ -42,13 +54,6 @@ class Rollout(dict):
         state = trajectory.states()[-1]
         state = re.sub("[\n\t]", "", state).split(".")[0]
         return state
-
-    def inference_str(self):
-        self_copy = copy.deepcopy(self)
-        self_copy["trajectory"][-1][-1] = "" # blank out the last action.
-        str_repr = str(self_copy["trajectory"])[:-len(self_copy["trajectory"].suffix())] # remove the trailing suffix.
-        print(str_repr)
-        return str_repr
     
     def hindsight_trajectories(self):
         trajectories = []

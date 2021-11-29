@@ -30,3 +30,4 @@ step 1 state: [ query_answer: Take the camera ] action: [ You take the camera. ]
 
 A couple examples for the question: "{question}"
 >>>>>>>>>>>>
+New example:
