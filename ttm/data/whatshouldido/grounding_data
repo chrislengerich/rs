@@ -1,4 +1,45 @@
-goal: [Your objective is to throw the textbook on the floor of the kitchenette. > -= Kitchenette =-0/2] step 0 state: [] action: [start] || step 1 state: [You make out a closed cabinet. > -= Kitchenette =-0/1] action: [whatshouldido] || 
-goal: [Your objective is to throw the textbook on the floor of the kitchenette. > -= Kitchenette =-0/2] step 0 state: [] action: [start] || step 1 state: [You make out a closed cabinet. > -= Kitchenette =-0/1] action: [whatshouldido] || step 2 state: [You make out a closed cabinet. > -= Kitchenette =-0/1 Throw the textbook] action: [throw the textbook] || 
-goal: [Your objective is to make sure that the freezer is closed. > -= Kitchenette =-0/2] step 0 state: [] action: [start] || step 1 state: [You can see a freezer. The freezer contains a passkey. You see a closed safe. You can make out a pan. The pan is ordinary. The pan appears to be empty. What, you think everything in TextWorld should have stuff on it? > -= Kitchenette =-0/1] action: [whatshouldido] || 
-goal: [Your objective is to make sure that the freezer is closed. > -= Kitchenette =-0/2] step 0 state: [] action: [start] || step 1 state: [You can see a freezer. The freezer contains a passkey. You see a closed safe. You can make out a pan. The pan is ordinary. The pan appears to be empty. What, you think everything in TextWorld should have stuff on it? > -= Kitchenette =-0/1] action: [whatshouldido] || step 2 state: [You can see a freezer. The freezer contains a passkey. You see a closed safe. You can make out a pan. The pan is ordinary. The pan appears to be empty. What, you think everything in TextWorld should have stuff on it? > -= Kitchenette =-0/1 Close the freezer. ] action: [close freezer] ||
+goal: [Your objective is to throw the textbook on the floor of the kitchenette. > -= Kitchenette =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [You make out a closed cabinet. > -= Kitchenette =-0/1] action: [whatshouldido]
+
+goal: [Your objective is to throw the textbook on the floor of the kitchenette. > -= Kitchenette =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [You make out a closed cabinet. > -= Kitchenette =-0/1] action: [whatshouldido]
+step 2 state: [You make out a closed cabinet. > -= Kitchenette =-0/1 Throw the textbook] action: [throw the textbook]
+
+goal: [Your objective is to make sure that the freezer is closed. > -= Kitchenette =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [You can see a freezer. The freezer contains a passkey. You see a closed safe. You can make out a pan. The pan is ordinary. The pan appears to be empty. What, you think everything in TextWorld should have stuff on it? > -= Kitchenette =-0/1] action: [whatshouldido]
+
+goal: [Your objective is to make sure that the freezer is closed. > -= Kitchenette =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [You can see a freezer. The freezer contains a passkey. You see a closed safe. You can make out a pan. The pan is ordinary. The pan appears to be empty. What, you think everything in TextWorld should have stuff on it? > -= Kitchenette =-0/1] action: [whatshouldido]
+step 2 state: [You can see a freezer. The freezer contains a passkey. You see a closed safe. You can make out a pan. The pan is ordinary. The pan appears to be empty. What, you think everything in TextWorld should have stuff on it? > -= Kitchenette =-0/1 Close the freezer. ] action: [close freezer]
+
+goal: [Your objective is to pick-up the mug from the floor of the study. > -= Study =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [ There is a mug and a shadfly on the floor. > -= Study =-0/1] action: [whatshouldido]
+
+goal: [Your objective is to pick-up the mug from the floor of the study. > -= Study =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [ There is a mug and a shadfly on the floor. > -= Study =-0/1] action: [whatshouldido]
+step 2 state: [ There is a mug and a shadfly on the floor. > -= Study =-0/1 Pick up the mug from the floor ] action: [pick up mug]
+
+goal: [Your objective is to pick up the shadfly from the mantelpiece inside the chamber. > -= Chamber =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [You can see a mantelpiece. You see a cucumber and a shadfly on the mantelpiece. Suddenly, you bump your head on the ceiling, but it's not such a bad bump that it's going to prevent you from looking at objects and even things. > -= Chamber =-0/1] action: [whatshouldido]
+
+goal: [Your objective is to pick up the shadfly from the mantelpiece inside the chamber. > -= Chamber =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [You can see a mantelpiece. You see a cucumber and a shadfly on the mantelpiece. Suddenly, you bump your head on the ceiling, but it's not such a bad bump that it's going to prevent you from looking at objects and even things. > -= Chamber =-0/1] action: [whatshouldido]
+step 2 state: [You can see a mantelpiece. You see a cucumber and a shadfly on the mantelpiece. Suddenly, you bump your head on the ceiling, but it's not such a bad bump that it's going to prevent you from looking at objects and even things. > -= Chamber =-0/1 Pick up shadfly from mantelpiece ] action: [pick up shadfly]
+
+goal: [Who's got a virtual machine and is about to play through an profound round of TextWorld? You do! Your task for today is to make absolutely sure the box is locked. > -= Recreation Zone =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [ There is a sandwich on the floor. > -= Recreation Zone =-0/1] action: [throw the sandwich]
+
+goal: [Who's got a virtual machine and is about to play through an profound round of TextWorld? You do! Your task for today is to make absolutely sure the box is locked. > -= Recreation Zone =-0/2]
+step 0 state: [] action: [start]
+step 1 state: [ There is a sandwich on the floor. > -= Recreation Zone =-0/1] action: [throw the sandwich]
+step 2 state: [ The sandwich is already here. > -= Recreation Zone =-0/2] action: [lick sandwich]
+

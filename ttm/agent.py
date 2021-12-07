@@ -163,6 +163,7 @@ class MetalearnedAgent(GPT3Agent):
         # generate an inference loop.
         rollout_state_str = rollout["trajectory"].state_inference_str()
         rollout_action_str = rollout["trajectory"].action_inference_str()
+        imagination_action_inference_str = rollout["trajectory"].imagination_action_inference_str()
         if self.path == "ttm/data/whatshouldido/":
             state0 = rollout["trajectory"].states()[-2] if len(rollout["trajectory"]) > 1 else ""
             action0 = rollout["trajectory"].actions()[-2] if len(rollout["trajectory"]) > 1 else ""
@@ -178,8 +179,12 @@ class MetalearnedAgent(GPT3Agent):
         else:
             print(f"Unknown path for agent data {self.path}")
 
-            formatted_query = "\n".join(self.prefix).format(rollout_state_str=rollout_state_str, rollout_action_str=rollout_action_str)
+            formatted_query = "\n".join(self.prefix).format(
+                imagination_action_inference_str=imagination_action_inference_str, rollout_state_str=rollout_state_str,
+                rollout_action_str=rollout_action_str)
         response = self.predict(formatted_query)
+        import pdb
+        pdb.set_trace()
         return self.parse(response), response, formatted_query
 
     def compress(self, rollouts: dict):

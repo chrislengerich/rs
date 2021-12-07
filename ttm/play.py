@@ -99,6 +99,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--policy", default="general", help="Policy used as a suffix for the filename")
+parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
 args = parser.parse_args()
 rollout_path = f"ttm/data/{args.policy}/grounding_data.pkl"
 
@@ -107,7 +108,7 @@ metalearn_prefix = "metalearn: "
 metalearn_goal = metalearn_prefix + agent_goal
 
 #agent = HumanAgent(agent_goal, device=0)
-agent = MetalearnedAgent(agent_goal, device=0, path="ttm/data/agent/")
+agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{args.meta_policy}/")
 
 max_train_epochs = 1
 train_epochs = 0
@@ -117,8 +118,12 @@ train_epochs = 0
 while train_epochs < max_train_epochs:
     rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy)
     rollouts = data.read_rollouts(rollout_pickle_path)
+    most_recent_game = list(rollouts.values())[-1][0]
+    print(f"Agent fitness: {most_recent_game.fitness()}")
+    import sys
+    sys.exit()
 
-    # metalearning loop.
+    # metalearning loop for creating new skills.
     action, compressed_rollout = agent.cognitive_dissonance(rollouts)
     trajectory = compressed_rollout["trajectory"]
     new_agent = None
@@ -167,5 +172,3 @@ while train_epochs < max_train_epochs:
 
     # train the agent on the data.
     train_epochs += 1
-
-env.close()
