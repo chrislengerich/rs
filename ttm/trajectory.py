@@ -26,7 +26,7 @@ class Trajectory(list):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
-            state = re.sub("[\n\t ]+", " ", state)
+            state = self.strip_state(str(state))
             string_repr += f"step {i} state: [{state}] action: ["
             if i < len(self) - 1:
                 string_repr += f"{action}]\n"
@@ -36,15 +36,16 @@ class Trajectory(list):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
-            state = re.sub("[\n\t ]+", " ", state)
+            state = self.strip_state(str(state))
             string_repr += f"step {i} state: [{state}] next_state: ["
             if i < len(self) - 1:
-                next_state = self.strip_state(self[i + 1][0])
+                next_state = self.strip_state(str(self[i + 1][0]))
                 string_repr += f"{next_state}] action: [ {action} ]\n"
         return string_repr
 
     def strip_state(self, state: str):
-        return re.sub("[\n\t ]+", " ", state)
+        homogenized_whitespace = re.sub("[\n\t ]+", " ", state)
+        return re.sub("[{}]", "", homogenized_whitespace)
 
     def imagination_action_str(self):
         """Imagine the next state, and act accordingly."""
@@ -52,8 +53,8 @@ class Trajectory(list):
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
             if i < len(self) - 1:
-                state = self.strip_state(state)
-                next_state = self.strip_state(self[i + 1][0])
+                state = self.strip_state(str(state))
+                next_state = self.strip_state(str(self[i + 1][0]))
                 string_repr += f"step {i} state: [{state}] next_state: [{next_state}] action: [{action}]\n"
         return string_repr
 
@@ -65,13 +66,27 @@ class Trajectory(list):
             if i < len(self) - 1:
                 string_repr += f"{state}] action: [{action}]\n"
         return string_repr
+
+    def model_inference_str(self):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others = self.strip_state(str(state_others))
+            string_repr += f"step {i} state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others}] action: [ {action} ]\n"
+        return string_repr
     
     def __str__(self):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
-            state = re.sub("[\n\t ]+", " ", state)
-            string_repr += f"step {i} state: [{state}] action: [{action.strip()}]\n"
+            state_str = self.strip_state(str(state))
+            string_repr += f"step {i} state: [{state_str}] action: [{action.strip()}]\n"
         return string_repr
 
 class Rollout(dict):
@@ -81,7 +96,7 @@ class Rollout(dict):
     
     def hindsight_goal(self, trajectory: Trajectory):
         state = trajectory.states()[-1]
-        state = re.sub("[\n\t]", "", state).split(".")[0]
+        state = re.sub("[\n\t]", "", str(state)).split(".")[0]
         return state
 
     def fitness(self):

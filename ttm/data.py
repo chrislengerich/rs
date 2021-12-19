@@ -1,3 +1,4 @@
+import os.path
 import pickle
 
 def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt', format='baseline'):
@@ -5,10 +6,10 @@ def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt
     Write rollouts to a text file, optionally compressing them for training.
     """
     rollouts_dict = read_rollouts(rollouts_filepath)
-    with open(filename, 'w') as f:
 
+    with open(filename, 'w') as f:
       # temporary hack to evaluate learning to predict-as-a-service.
-      rollouts_dict = {"1": rollouts_dict}
+      # rollouts_dict = {"1": rollouts_dict}
       for game, rollouts in rollouts_dict.items():
         for r in rollouts:
           print(r)
@@ -26,9 +27,11 @@ def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt
 
 def read_rollouts(rollouts_filepath: str):
   """Reads rollouts from the pickle file."""
-  with open(rollouts_filepath, 'rb') as f:
-    rollouts_dict = pickle.load(f)
-  return rollouts_dict
+  if os.path.exists(rollouts_filepath):
+    with open(rollouts_filepath, 'rb') as f:
+      return pickle.load(f)
+  else:
+    return {}
 
 
 

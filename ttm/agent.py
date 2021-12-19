@@ -26,6 +26,10 @@ class Agent:
 
     learning_trajectory = []
     rollouts = []
+    motivating_contexts: List[str] = None
+    name: str = None
+    prefix: List[str] = None
+    parse_regex: str = "(.*)"
 
     def __init__(self, agent_goal: str, device=0):
         self.agent_goal = agent_goal
@@ -85,11 +89,6 @@ class Agent:
 
 class GPT3Agent(Agent):
 
-    motivating_contexts: List[str] = None
-    name: str = None
-    prefix: List[str] = None
-    parse_regex: str = None
-
     def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
         self.path = path
         if path:
@@ -123,7 +122,8 @@ class GPT3Agent(Agent):
         print("PROMPT>>>>")
         print(prompt)
         max_tokens = self.length # 100 # 500
-        response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=max_tokens)
+        response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=max_tokens,
+                                            temperature=1.2)
         print("RESPONSE>>>>")
         print(response)
         return response
@@ -146,23 +146,28 @@ class GPT3Agent(Agent):
 
 class MetalearnedAgent(GPT3Agent):
 
-    def parse(self, response: str) -> str:
+    def parse(self, response: str, keys: List[str]) -> str:
         response_str = response["choices"][0]["text"]
         response_str = response_str.replace("\n", " ")
         match = re.match(self.parse_regex, response_str)
+        results = dict(zip(keys, len(keys) * [""]))
         if match:
-            return match.group(1)
+            for i in range(len(keys)):
+                results[keys[i]] = match.group(i+1)
+            return results
         else:
-            if len(response_str) < 200:
-                return response_str
-            else:
-                return ""
+            # if len(response_str) < 200:
+            #     results["action"] = response_str
+            # else:
+            results["action"] = ""
+            return results
 
     def predict_rollout(self, rollout: Rollout):
         # whatshouldido format - temporary hack to get this to work. tbd: write this as a flat file and get Codex to
         # generate an inference loop.
         rollout_state_str = rollout["trajectory"].state_inference_str()
         rollout_action_str = rollout["trajectory"].action_inference_str()
+        model_inference_str = rollout["trajectory"].model_inference_str()
         imagination_action_inference_str = rollout["trajectory"].imagination_action_inference_str()
         if self.path == "ttm/data/whatshouldido/":
             state0 = rollout["trajectory"].states()[-2] if len(rollout["trajectory"]) > 1 else ""
@@ -181,11 +186,13 @@ class MetalearnedAgent(GPT3Agent):
 
             formatted_query = "\n".join(self.prefix).format(
                 imagination_action_inference_str=imagination_action_inference_str, rollout_state_str=rollout_state_str,
-                rollout_action_str=rollout_action_str)
+                rollout_action_str=rollout_action_str, model_inference_str=model_inference_str)
         response = self.predict(formatted_query)
-        import pdb
-        pdb.set_trace()
-        return self.parse(response), response, formatted_query
+        # TODO: make this a per-policy function.
+        parsed = self.parse(response, keys=["summary", "expectation", "update", "action"])
+        action = parsed["action"]
+        del parsed["action"]
+        return action, parsed, formatted_query
 
     def compress(self, rollouts: dict):
         # Learned policy for compression.
@@ -291,7 +298,20 @@ class HumanAgent(Agent):
         
     def predict(self, prompt: str, rollout: Rollout):
         print(prompt)
-        return input("> "), "unused_prediction"
+        return input("action> "), "unused_prediction"
+
+    # returns metalearn action, full action and query.
+    def predict_rollout(self, unused_rollout: Rollout):
+        try:
+            update = int(input("update:"))
+        except ValueError:
+            update = 0
+        summary = input("summary:")
+        expectation = input("expectation:")
+        state = {"summary": summary, "expectation": expectation, "update": update}
+        action = input("action: ")
+        return action, state, ""
+
 
 
         

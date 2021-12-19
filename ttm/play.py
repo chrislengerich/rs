@@ -46,11 +46,11 @@ def metalearn(agent, max_train_epochs=1):
 
 def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str=""):
     """Builds a game and run rollouts in that game"""
-    game = agent.build_game(1, 1000)
+    game = agent.build_game(4, 1001)
     env = setup_game(game)
     goal = get_goal(env)
     print(f"goal is '{goal}'")
-    max_actions = 2  # 3
+    max_actions = 5  # 3
     max_rollouts = 1  # 10
     rollouts = []
     known_policies = sorted(known_policies, key=len, reverse=True)
@@ -62,16 +62,18 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         score, actions, done = 0, 0, False
         trajectory = Trajectory()
         goal = Goal(goal)
-        trajectory.append(["", goal, "start"])
+        trajectory.append([{"obs": "", "summary": "", "expectation": "", "update": ""}, goal, "start"])
         scores = []
         rollout = Rollout(trajectory, goal, scores)
         while not done and actions < max_actions:
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
-            trajectory.append([obs, goal, "blank"])
+            state = {"obs": obs}
+            trajectory.append([state, goal, "blank"])
             if new_policy != "" and actions == 0:
                 metalearn_action = new_policy
             else:
-                metalearn_action, full_action, formatted_query = agent.predict_rollout(rollout)
+                metalearn_action, dict_update, formatted_query = agent.predict_rollout(rollout)
+            state.update(dict_update)
             # agent.get_metalearning_action(
             # HumanAgent(metalearn_goal), obs, metalearn_rollout)
             print(f"metalearn action >>>> {metalearn_action} <<<<")
@@ -94,6 +96,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 print(scores)
                 env.render()
             actions += 1
+            agent.write_rollouts(rollouts, game, policy)
         rollouts.append(rollout)
     return agent.write_rollouts(rollouts, game, policy)
 
@@ -107,8 +110,10 @@ agent_goal = "score = 10000"
 metalearn_prefix = "metalearn: "
 metalearn_goal = metalearn_prefix + agent_goal
 
-#agent = HumanAgent(agent_goal, device=0)
-agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{args.meta_policy}/")
+if args.meta_policy == "human":
+    agent = HumanAgent(agent_goal, device=0)
+else:
+    agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{args.meta_policy}/")
 
 max_train_epochs = 1
 train_epochs = 0
