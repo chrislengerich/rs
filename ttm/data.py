@@ -32,17 +32,20 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
   with open(finetune_filepath, 'w') as f:
     for game, rollouts in rollouts_dict.items():
       for r in rollouts:
-        print(r)
+        #print(r)
         trajs = r.hindsight_trajectories()
-        print(len(trajs))
-        print(finetune_filepath)
+        #print(len(trajs))
+        #print(finetune_filepath)
         for t in trajs:
           if format == "imagination_action_str":
             line = t.imagination_action_str()
           else:
             line = str(t)
-          print(line)
+          #print(line)
           if t[0][0] == '':
+            print("continuing")
+            print(t)
+            print("")
             continue
           prompt, completion = t.model_inference_str()
           j = {"prompt": prompt, "completion": " " + completion}

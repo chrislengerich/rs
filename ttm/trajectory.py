@@ -1,8 +1,10 @@
 import re
+import datetime
 
 from typing import Optional
 from typing import List
 import copy
+import numpy as np
 
 class Goal:
     def __init__(self, goal: str): 
@@ -92,8 +94,13 @@ class Trajectory(list):
         return string_repr
 
 class Rollout(dict):
+
+    agent = {}
+    timestamp = None
     
-    def __init__(self, trajectory: Trajectory, goal: Goal, scores: List[int]):
+    def __init__(self, trajectory: Trajectory, goal: Goal, scores: List[int], agent:dict = {}):
+        self.agent = agent
+        self.timestamp = datetime.datetime.now()
         return self.update({"trajectory": trajectory, "goal": goal, "scores": scores})
     
     def hindsight_goal(self, trajectory: Trajectory):
@@ -103,6 +110,18 @@ class Rollout(dict):
 
     def fitness(self):
         return self["scores"][-1]
+
+    def unique_ratio(self, dataset):
+        return len(set(dataset)) / len(dataset)
+
+    def learning(self):
+        action_diversity = self.unique_ratio(self["trajectory"].actions())
+        obs_diversity = self.unique_ratio([i["obs"] for i in self["trajectory"].states()])
+        obs = [i["obs"] for i in self["trajectory"].states()]
+        blank_ratio = len([i for i in self["trajectory"].actions() if i == ""]) / len(self["trajectory"].actions())
+        return {"action_diversity": action_diversity, "obs_diversity": obs_diversity, "blank_ratio": blank_ratio,
+                "obs_diversity": \
+            obs_diversity, "joint": np.mean([action_diversity, obs_diversity, (1- blank_ratio)])}
     
     def hindsight_trajectories(self):
         trajectories = []
@@ -115,7 +134,7 @@ class Rollout(dict):
                 # for i in range(len(new_traj)):
                 #     new_traj[i][1] = hindsight_goal
                 trajectories.append(new_traj)
-        print(len(trajectories))
+        #print(len(trajectories))
         return trajectories
     
     

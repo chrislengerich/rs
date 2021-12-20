@@ -92,6 +92,11 @@ class Agent:
 
 class GPT3Agent(Agent):
 
+    engine = "curie:ft-personal-2021-12-20-18-02-30"
+    engine = "curie:ft-personal-2021-12-20-21-51-56" # 0.34c
+    engine = "curie:ft-personal-2021-12-20-22-29-54" # 0.29c
+    #engine = "davinci-instruct-beta"
+
     def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
         self.path = path
         if path:
@@ -119,7 +124,7 @@ class GPT3Agent(Agent):
         self.length = length
         self.path = f"ttm/data/{self.name}"
 
-    def predict(self, prompt: str, engine: str = "davinci-instruct-beta"):
+    def predict(self, prompt: str):
         """Dispatches a query to GPT-3."""
         openai.api_key = os.getenv("OPENAI_API_KEY")
         #engine = "curie:ft-personal-2021-12-20-02-09-16"
@@ -129,16 +134,15 @@ class GPT3Agent(Agent):
         #engine="curie:ft-personal-2021-12-20-16-07-06"
         #engine="curie:ft-personal-2021-12-20-16-56-02"
         #engine="davinci:ft-personal-2021-12-20-17-25-15"
-        engine="curie:ft-personal-2021-12-20-18-02-30"
         print("PROMPT>>>>")
         print(prompt)
         max_tokens = self.length # 100 # 500
-        print(engine)
-        if re.match(".*ft-.*", engine):
-            response = openai.Completion.create(model=engine, prompt=prompt, max_tokens=max_tokens,
+        print(self.engine)
+        if re.match(".*ft-.*", self.engine):
+            response = openai.Completion.create(model=self.engine, prompt=prompt, max_tokens=max_tokens,
                                             temperature=1.2, stop="\n")
         else:
-            response = openai.Completion.create(engine=engine, prompt=prompt, max_tokens=max_tokens,
+            response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=max_tokens,
                                                 temperature=1.2, stop="\n")
         print("RESPONSE>>>>")
         print(response)
@@ -316,6 +320,8 @@ class TransformerAgent(MetalearnedAgent):
         trainer.save_model()
     
 class HumanAgent(Agent):
+    name = "human"
+    engine = ""
         
     def predict(self, prompt: str, rollout: Rollout):
         print(prompt)

@@ -65,7 +65,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         goal = Goal(goal)
         trajectory.append([{"obs": "", "summary": "", "expectation": "", "update": ""}, goal, "start"])
         scores = []
-        rollout = Rollout(trajectory, goal, scores)
+        rollout = Rollout(trajectory, goal, scores, agent={"name": agent.name, "engine": agent.engine})
         while not done and actions < max_actions:
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
             state = {"obs": obs}
@@ -100,12 +100,22 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 print(scores)
                 env.render()
             actions += 1
-            agent.write_rollouts(rollouts, game, policy)
         rollouts.append(rollout)
-    return agent.write_rollouts(rollouts, game, policy)
+
+    most_recent_game = rollouts[-1]
+    fitness = most_recent_game.fitness()
+    learning = most_recent_game.learning()
+    print(f"Train epochs: {train_epochs}")
+    print(f"Agent fitness: {fitness}")
+    print(f"Agent learning: {learning}")
+    if policy != "" and fitness > 0:
+        print("Saving agent trajectory")
+        return agent.write_rollouts(rollouts, game, policy)
+    else:
+        return "", ""
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--policy", default="general", help="Policy used as a suffix for the filename")
+parser.add_argument("--policy", default="", help="Policy used as a suffix for the filename")
 parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
 parser.add_argument("--seed", default=1000, help="Random seed")
 parser.add_argument("--max_actions", type=int, default=3, help="Max actions")
@@ -129,11 +139,7 @@ fitness = 0
 # Currently uses a fixed policy to achieve its objective.
 while train_epochs < max_train_epochs and fitness < 1:
     rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, seed=args.seed, max_actions=args.max_actions)
-    rollouts = data.read_rollouts(rollout_pickle_path)
-    most_recent_game = list(rollouts.values())[-1][0]
-    fitness = most_recent_game.fitness()
-    print(f"Train epochs: {train_epochs}")
-    print(f"Agent fitness: {fitness}")
+    #rollouts = data.read_rollouts(rollout_pickle_path)
 
     # metalearning loop for creating new skills.
     # action, compressed_rollout = agent.cognitive_dissonance(rollouts)
