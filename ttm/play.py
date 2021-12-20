@@ -46,7 +46,7 @@ def metalearn(agent, max_train_epochs=1):
 
 def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str=""):
     """Builds a game and run rollouts in that game"""
-    game = agent.build_game(4, 1001)
+    game = agent.build_game(7, 2, 998)
     env = setup_game(game)
     goal = get_goal(env)
     print(f"goal is '{goal}'")
@@ -73,6 +73,9 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 metalearn_action = new_policy
             else:
                 metalearn_action, dict_update, formatted_query = agent.predict_rollout(rollout)
+                # carry through the summary.
+                if dict_update['summary'] == '' and len(trajectory) > 1:
+                    dict_update['summary'] = trajectory[-2][0]['summary']
             state.update(dict_update)
             # agent.get_metalearning_action(
             # HumanAgent(metalearn_goal), obs, metalearn_rollout)
@@ -117,44 +120,45 @@ else:
 
 max_train_epochs = 1
 train_epochs = 0
+fitness = 0
 
 # Meta-learning agent.
 # Currently uses a fixed policy to achieve its objective.
-while train_epochs < max_train_epochs:
+while train_epochs < max_train_epochs and fitness < 1:
     rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy)
     rollouts = data.read_rollouts(rollout_pickle_path)
     most_recent_game = list(rollouts.values())[-1][0]
-    print(f"Agent fitness: {most_recent_game.fitness()}")
-    import sys
-    sys.exit()
+    fitness = most_recent_game.fitness()
+    print(f"Train epochs: {train_epochs}")
+    print(f"Agent fitness: {fitness}")
 
     # metalearning loop for creating new skills.
-    action, compressed_rollout = agent.cognitive_dissonance(rollouts)
-    trajectory = compressed_rollout["trajectory"]
-    new_agent = None
-    while action != "predict":
-        if re.match(r".*new_question_policy.*", action):
-            new_question_agent = MetalearnedAgent(metalearn_goal, path="ttm/data/new_question_policy/")
-            trajectory[-1][-1] = "new_question_policy"  # compressed version of the trace of the action.
-            new_question, response, formatted_query = new_question_agent.predict_rollout(compressed_rollout)
-            compressed_rollout["trajectory"].append([new_question, metalearn_goal, "new_prefix_policy"])
-        elif re.match(r".*new_prefix_policy.*", action):
-            new_prefix_agent = MetalearnedAgent(metalearn_goal, path="ttm/data/new_prefix_policy/")
-            trajectory[-1][-1] = "new_prefix_policy"  # compressed version of the trace of the action.
-            new_prefix, response, formatted_query = new_prefix_agent.predict_rollout(compressed_rollout)
-            new_agent = MetalearnedAgent(metalearn_goal, path=None)
-            full_prefix = new_prefix.split("\n") + ["New example:", f"{{rollout_action_str}} action: [ query: "
-                                                                    f"{new_question}] ", "state: ["]
-            # TBD: let the agent generate length and a regex parser for itself.
-            new_agent.load_agent(full_prefix, str(compressed_rollout), [], new_question, 100)
-            new_agent.save()
-            compressed_rollout["trajectory"].append([f"new_prefix: {new_agent.name}", metalearn_goal, "train_grounding"])
-            print(compressed_rollout)
-        elif re.match(r".*train_grounding.*", action):
-            run_rollouts(agent, new_agent.name, known_policies=["whatcanido", "whatshouldido"] + [new_agent.name],
-                         new_policy=new_agent.name)
-            compressed_rollout["trajectory"].append([f"ran rollouts", metalearn_goal, "cognitive_dissonance"])
-        action = compressed_rollout["trajectory"].actions()[-1]
+    # action, compressed_rollout = agent.cognitive_dissonance(rollouts)
+    # trajectory = compressed_rollout["trajectory"]
+    # new_agent = None
+    # while action != "predict":
+    #     if re.match(r".*new_question_policy.*", action):
+    #         new_question_agent = MetalearnedAgent(metalearn_goal, path="ttm/data/new_question_policy/")
+    #         trajectory[-1][-1] = "new_question_policy"  # compressed version of the trace of the action.
+    #         new_question, response, formatted_query = new_question_agent.predict_rollout(compressed_rollout)
+    #         compressed_rollout["trajectory"].append([new_question, metalearn_goal, "new_prefix_policy"])
+    #     elif re.match(r".*new_prefix_policy.*", action):
+    #         new_prefix_agent = MetalearnedAgent(metalearn_goal, path="ttm/data/new_prefix_policy/")
+    #         trajectory[-1][-1] = "new_prefix_policy"  # compressed version of the trace of the action.
+    #         new_prefix, response, formatted_query = new_prefix_agent.predict_rollout(compressed_rollout)
+    #         new_agent = MetalearnedAgent(metalearn_goal, path=None)
+    #         full_prefix = new_prefix.split("\n") + ["New example:", f"{{rollout_action_str}} action: [ query: "
+    #                                                                 f"{new_question}] ", "state: ["]
+    #         # TBD: let the agent generate length and a regex parser for itself.
+    #         new_agent.load_agent(full_prefix, str(compressed_rollout), [], new_question, 100)
+    #         new_agent.save()
+    #         compressed_rollout["trajectory"].append([f"new_prefix: {new_agent.name}", metalearn_goal, "train_grounding"])
+    #         print(compressed_rollout)
+    #     elif re.match(r".*train_grounding.*", action):
+    #         run_rollouts(agent, new_agent.name, known_policies=["whatcanido", "whatshouldido"] + [new_agent.name],
+    #                      new_policy=new_agent.name)
+    #         compressed_rollout["trajectory"].append([f"ran rollouts", metalearn_goal, "cognitive_dissonance"])
+    #     action = compressed_rollout["trajectory"].actions()[-1]
 
     # if train_epochs == 0:
     #     agent.load_model("ttm/gpt2-rollout")

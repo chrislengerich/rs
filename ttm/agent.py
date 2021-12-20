@@ -19,6 +19,7 @@ from torch.utils.data import IterableDataset
 from trajectory import Rollout
 from transformers import Trainer, TrainingArguments
 import openai
+import readline
 
 from ttm import data
 
@@ -53,14 +54,16 @@ class Agent:
         self.rollouts.append(Rollout(self.learning_trajectory, goal, scores))
         self.learning_trajectory = []
 
-    def build_game(self, world_size: float, seed: int = None) -> str:
+    def build_game(self, world_size: float, quest_length: int = 1, seed: int = None) -> str:
         """Builds a text-world game at a specific difficulty level, returning the game name."""
         self.append_state(f"build_game: world_size: {world_size} seed: {seed}")
         if not seed:
             seed = random.randint(0, 100000)
-        name = f"grounding_game_{world_size}_{seed}.z8"
+        name = f"grounding_game_{world_size}_{seed}_{quest_length}.z8"
         subprocess.check_output(
-            ["tw-make", "custom", "--world-size", str(world_size), "--nb-objects", "4", "--quest-length", "1", "--seed",
+            ["tw-make", "custom", "--world-size", str(world_size), "--nb-objects", "4", "--quest-length",
+             str(quest_length),
+             "--seed",
              str(seed), "--output", f"tw_games/{name}"])
         return name
 
@@ -92,7 +95,7 @@ class GPT3Agent(Agent):
     def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
         self.path = path
         if path:
-            for param in ["prefix", "motivating_examples", "grounding_data"]:
+            for param in ["prefix", "motivating_examples", "grounding_data", "prefix_ft"]:
                 with open(os.path.join(path, param), "r") as f:
                     self.__dict__[param] = [l.strip() for l in f.readlines()]
             for param in ["name", "parse_regex"]:
@@ -116,14 +119,22 @@ class GPT3Agent(Agent):
         self.length = length
         self.path = f"ttm/data/{self.name}"
 
-    def predict(self, prompt: str):
+    def predict(self, prompt: str, engine: str = "davinci-instruct-beta"):
         """Dispatches a query to GPT-3."""
         openai.api_key = os.getenv("OPENAI_API_KEY")
+        #engine = "curie:ft-personal-2021-12-20-02-09-16"
+        #engine = "curie:ft-personal-2021-12-20-04-07-04"
+        engine = "curie:ft-personal-2021-12-20-05-42-41"
         print("PROMPT>>>>")
         print(prompt)
         max_tokens = self.length # 100 # 500
-        response = openai.Completion.create(engine="davinci-instruct-beta", prompt=prompt, max_tokens=max_tokens,
+        print(engine)
+        if re.match(".*ft-.*", engine):
+            response = openai.Completion.create(model=engine, prompt=prompt, max_tokens=max_tokens,
                                             temperature=1.2)
+        else:
+            response = openai.Completion.create(engine=engine, prompt=prompt, max_tokens=max_tokens,
+                                                temperature=1.2)
         print("RESPONSE>>>>")
         print(response)
         return response
@@ -167,30 +178,35 @@ class MetalearnedAgent(GPT3Agent):
         # generate an inference loop.
         rollout_state_str = rollout["trajectory"].state_inference_str()
         rollout_action_str = rollout["trajectory"].action_inference_str()
-        model_inference_str = rollout["trajectory"].model_inference_str()
+        model_inference_str, _ = rollout["trajectory"].model_inference_str()
         imagination_action_inference_str = rollout["trajectory"].imagination_action_inference_str()
+        agent_type = "finetuned"
+        if agent_type == "finetuned":
+            prefix = self.prefix_ft
+        else:
+            prefix = self.prefix
         if self.path == "ttm/data/whatshouldido/":
             state0 = rollout["trajectory"].states()[-2] if len(rollout["trajectory"]) > 1 else ""
             action0 = rollout["trajectory"].actions()[-2] if len(rollout["trajectory"]) > 1 else ""
-            formatted_query = "\n".join(self.prefix).format(goal=rollout["goal"], state1=rollout["trajectory"].states()[-1],
+            formatted_query = "\n".join(prefix).format(goal=rollout["goal"], state1=rollout["trajectory"].states()[-1],
                                                             state0=state0, action0=action0)
         elif self.path == "ttm/data/agent/":
-            formatted_query = "\n".join(self.prefix).format(rollout=rollout_action_str)
+            formatted_query = "\n".join(prefix).format(rollout=rollout_action_str)
         elif self.path == "ttm/data/new_question_policy/":
-            formatted_query = "\n".join(self.prefix).format(rollout=rollout_action_str)
+            formatted_query = "\n".join(prefix).format(rollout=rollout_action_str)
         elif self.path == "ttm/data/new_prefix_policy/":
             question = rollout["trajectory"].states()[-1]
-            formatted_query = "\n".join(self.prefix).format(rollout=rollout_action_str, question=question)
+            formatted_query = "\n".join(prefix).format(rollout=rollout_action_str, question=question)
         else:
             print(f"Unknown path for agent data {self.path}")
-
-            formatted_query = "\n".join(self.prefix).format(
+            formatted_query = "\n".join(prefix).format(
                 imagination_action_inference_str=imagination_action_inference_str, rollout_state_str=rollout_state_str,
                 rollout_action_str=rollout_action_str, model_inference_str=model_inference_str)
         response = self.predict(formatted_query)
         # TODO: make this a per-policy function.
         parsed = self.parse(response, keys=["summary", "expectation", "update", "action"])
         action = parsed["action"]
+        action = action[:min(50, len(action))]
         del parsed["action"]
         return action, parsed, formatted_query
 
@@ -300,13 +316,22 @@ class HumanAgent(Agent):
         print(prompt)
         return input("action> "), "unused_prediction"
 
+    def rlinput(self, prompt, prefill=''):
+        readline.set_startup_hook(lambda: readline.insert_text(prefill))
+        try:
+            return input(prompt)  # or raw_input in Python 2
+        finally:
+            readline.set_startup_hook()
+
     # returns metalearn action, full action and query.
-    def predict_rollout(self, unused_rollout: Rollout):
+    def predict_rollout(self, rollout: Rollout):
         try:
             update = int(input("update:"))
         except ValueError:
             update = 0
-        summary = input("summary:")
+        prefill_summary = rollout["trajectory"].states()[-2]["summary"] if len(rollout["trajectory"].states()) >= 2 \
+            else ""
+        summary = self.rlinput("summary:", prefill_summary)
         expectation = input("expectation:")
         state = {"summary": summary, "expectation": expectation, "update": update}
         action = input("action: ")

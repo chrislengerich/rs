@@ -79,8 +79,10 @@ class Trajectory(list):
             string_repr += f"step {i} state: [{state_obs},"
             if i < len(self) - 1:
                 string_repr += f"{state_others}] action: [ {action} ]\n"
-        return string_repr
-    
+            else:
+                completion_str = f" {state_others}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
     def __str__(self):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
