@@ -107,9 +107,9 @@ class Rollout(dict):
     def hindsight_trajectories(self):
         trajectories = []
         for i in range(2,len(self["trajectory"])+1):
-            print(f"i={i}")
+            #print(f"i={i}")
             if len(self["trajectory"]) >= 2:
-                print(f"i={i}")
+                #print(f"i={i}")
                 new_traj = Trajectory(copy.deepcopy(self["trajectory"][:i]))
                 # hindsight_goal = self.hindsight_goal(new_traj)
                 # for i in range(len(new_traj)):

@@ -44,13 +44,14 @@ def metalearn(agent, max_train_epochs=1):
         agent.train("ttm/gpt2-metalearn", rollout_path, rollout_path)
         train_epochs += 1
 
-def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str=""):
+def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str="",
+                 seed: int=994, max_actions=3):
     """Builds a game and run rollouts in that game"""
-    game = agent.build_game(7, 2, 998)
+    game = agent.build_game(7, 3, seed)
     env = setup_game(game)
     goal = get_goal(env)
     print(f"goal is '{goal}'")
-    max_actions = 5  # 3
+    max_actions = max_actions  # 3
     max_rollouts = 1  # 10
     rollouts = []
     known_policies = sorted(known_policies, key=len, reverse=True)
@@ -94,7 +95,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 command = metalearn_action
                 trajectory[-1][-1] = command
                 obs, score, done, infos = env.step(command)
-                print(infos)
+                #print(infos)
                 scores.append(score)
                 print(scores)
                 env.render()
@@ -106,6 +107,8 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
 parser = argparse.ArgumentParser()
 parser.add_argument("--policy", default="general", help="Policy used as a suffix for the filename")
 parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
+parser.add_argument("--seed", default=1000, help="Random seed")
+parser.add_argument("--max_actions", type=int, default=3, help="Max actions")
 args = parser.parse_args()
 rollout_path = f"ttm/data/{args.policy}/grounding_data.pkl"
 
@@ -125,7 +128,7 @@ fitness = 0
 # Meta-learning agent.
 # Currently uses a fixed policy to achieve its objective.
 while train_epochs < max_train_epochs and fitness < 1:
-    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy)
+    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, seed=args.seed, max_actions=args.max_actions)
     rollouts = data.read_rollouts(rollout_pickle_path)
     most_recent_game = list(rollouts.values())[-1][0]
     fitness = most_recent_game.fitness()

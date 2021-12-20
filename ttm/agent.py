@@ -124,17 +124,22 @@ class GPT3Agent(Agent):
         openai.api_key = os.getenv("OPENAI_API_KEY")
         #engine = "curie:ft-personal-2021-12-20-02-09-16"
         #engine = "curie:ft-personal-2021-12-20-04-07-04"
-        engine = "curie:ft-personal-2021-12-20-05-42-41"
+        #engine = "curie:ft-personal-2021-12-20-05-42-41"
+        #engine = "curie:ft-personal-2021-12-20-15-11-50"
+        #engine="curie:ft-personal-2021-12-20-16-07-06"
+        #engine="curie:ft-personal-2021-12-20-16-56-02"
+        #engine="davinci:ft-personal-2021-12-20-17-25-15"
+        engine="curie:ft-personal-2021-12-20-18-02-30"
         print("PROMPT>>>>")
         print(prompt)
         max_tokens = self.length # 100 # 500
         print(engine)
         if re.match(".*ft-.*", engine):
             response = openai.Completion.create(model=engine, prompt=prompt, max_tokens=max_tokens,
-                                            temperature=1.2)
+                                            temperature=1.2, stop="\n")
         else:
             response = openai.Completion.create(engine=engine, prompt=prompt, max_tokens=max_tokens,
-                                                temperature=1.2)
+                                                temperature=1.2, stop="\n")
         print("RESPONSE>>>>")
         print(response)
         return response
@@ -326,7 +331,7 @@ class HumanAgent(Agent):
     # returns metalearn action, full action and query.
     def predict_rollout(self, rollout: Rollout):
         try:
-            update = int(input("update:"))
+            update = input("update:")
         except ValueError:
             update = 0
         prefill_summary = rollout["trajectory"].states()[-2]["summary"] if len(rollout["trajectory"].states()) >= 2 \

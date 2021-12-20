@@ -13,16 +13,16 @@ def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt
       # rollouts_dict = {"1": rollouts_dict}
       for game, rollouts in rollouts_dict.items():
         for r in rollouts:
-          print(r)
+          #print(r)
           trajs = r.hindsight_trajectories()
-          print(len(trajs))
-          print(filename)
+          #print(len(trajs))
+          #print(filename)
           for t in trajs:
             if format == "imagination_action_str":
               line = t.imagination_action_str()
             else:
               line = str(t)
-            print(line)
+            #print(line)
             f.write(line)
             f.write('\n')
 
