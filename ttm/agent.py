@@ -20,6 +20,7 @@ from trajectory import Rollout
 from transformers import Trainer, TrainingArguments
 import openai
 import readline
+import json
 
 from ttm import data
 
@@ -77,7 +78,7 @@ class Agent:
                 old_rollouts = pickle.load(f)
         else:
             old_rollouts = {}
-        old_rollouts.update({game: rollouts})
+        old_rollouts.setdefault(game, []).extend(rollouts)
         with open(pickle_path, "wb") as f:
             pickle.dump(old_rollouts, f)
         data.write_rollouts_text(pickle_path, txt_path)
@@ -95,6 +96,18 @@ class GPT3Agent(Agent):
     engine = "curie:ft-personal-2021-12-20-18-02-30"
     engine = "curie:ft-personal-2021-12-20-21-51-56" # 0.34c
     engine = "curie:ft-personal-2021-12-20-22-29-54" # 0.29c
+    engine = "curie:ft-personal-2021-12-21-00-09-10" # 0.24c - changed the order of the update steps.
+    engine = "curie:ft-personal-2021-12-21-03-51-15" # 0.26c
+    engine = "curie:ft-personal-2021-12-21-04-43-50" # 0.34c
+    engine = "curie:ft-personal-2021-12-21-05-50-39" # 0.45c - Added 18 data points from environmental selection (starting from 66)
+    engine = "curie:ft-personal-2021-12-22-06-34-44" # 0.29c - Imitation learning baseline using training data from ^.
+    engine = "curie:ft-personal-2021-12-22-08-45-47" # 0.56c
+    engine = "curie:ft-personal-2021-12-22-09-45-32" # 0.28c
+    engine = "curie:ft-personal-2021-12-22-22-58-10" # 0.34c
+    engine = "curie:ft-personal-2021-12-22-23-34-12" # 0.40c
+    engine = "curie:ft-personal-2021-12-23-00-17-19" # 0.45c
+    engine = "curie:ft-personal-2021-12-23-03-10-44" # 0.91c - k = 8 sliding window of observations, 131 examples.
+    engine = "curie:ft-personal-2021-12-23-03-58-03" # 0.53c - k = 8 imitation learned variant, 131 examples.
     #engine = "davinci-instruct-beta"
 
     def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
@@ -103,12 +116,15 @@ class GPT3Agent(Agent):
             for param in ["prefix", "motivating_examples", "grounding_data", "prefix_ft"]:
                 with open(os.path.join(path, param), "r") as f:
                     self.__dict__[param] = [l.strip() for l in f.readlines()]
-            for param in ["name", "parse_regex"]:
+            for param in ["name", "parse_regex", "engine"]:
                 with open(os.path.join(path, param), "r") as f:
                     self.__dict__[param] = [l.strip().replace('\\\\', '\\') for l in f.readlines()][0]
             for param in ["length"]:
                 with open(os.path.join(path, param), "r") as f:
                     self.__dict__[param] = int(f.readlines()[0].strip())
+            for param in ["keys"]:
+                with open(os.path.join(path, param), "r") as f:
+                    self.__dict__[param] = json.loads(f.readlines()[0].strip())
         super().__init__(agent_goal, device)
 
     def build_name(self, name:str):
@@ -140,10 +156,10 @@ class GPT3Agent(Agent):
         print(self.engine)
         if re.match(".*ft-.*", self.engine):
             response = openai.Completion.create(model=self.engine, prompt=prompt, max_tokens=max_tokens,
-                                            temperature=1.2, stop="\n")
+                                            temperature=1, stop="\n")
         else:
             response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=max_tokens,
-                                                temperature=1.2, stop="\n")
+                                                temperature=1, stop="\n")
         print("RESPONSE>>>>")
         print(response)
         return response
@@ -189,6 +205,7 @@ class MetalearnedAgent(GPT3Agent):
         rollout_action_str = rollout["trajectory"].action_inference_str()
         model_inference_str, _ = rollout["trajectory"].model_inference_str()
         imagination_action_inference_str = rollout["trajectory"].imagination_action_inference_str()
+        imitation_inference_str, _ = rollout["trajectory"].imitation_inference_str()
         agent_type = "finetuned"
         if agent_type == "finetuned":
             prefix = self.prefix_ft
@@ -210,10 +227,10 @@ class MetalearnedAgent(GPT3Agent):
             print(f"Unknown path for agent data {self.path}")
             formatted_query = "\n".join(prefix).format(
                 imagination_action_inference_str=imagination_action_inference_str, rollout_state_str=rollout_state_str,
-                rollout_action_str=rollout_action_str, model_inference_str=model_inference_str)
+                rollout_action_str=rollout_action_str, model_inference_str=model_inference_str,
+                imitation_inference_str=imitation_inference_str)
         response = self.predict(formatted_query)
-        # TODO: make this a per-policy function.
-        parsed = self.parse(response, keys=["summary", "expectation", "update", "action"])
+        parsed = self.parse(response, keys=self.keys)
         action = parsed["action"]
         action = action[:min(50, len(action))]
         del parsed["action"]

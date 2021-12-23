@@ -69,20 +69,63 @@ class Trajectory(list):
                 string_repr += f"{state}] action: [{action}]\n"
         return string_repr
 
+    def dict_to_str(self, dict):
+        causal_order = ["update", "summary", "expectation"]
+        string_repr = ""
+        for i,c in enumerate(causal_order):
+            if c in dict:
+                repr = re.sub("[\'\"]", "", str(dict[c]))
+                string_repr += f"'{c}': '{repr}', "
+                if i == len(causal_order) - 1:
+                    string_repr = string_repr[:-2]
+        return string_repr
+
     def model_inference_str(self):
         """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            # TODO(experiment with a summary version).
+            if i < len(self) - 8:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others = self.strip_state(self.dict_to_str(state_others))
+            string_repr += f"step {i} state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others}] action: [ {action} ]\n"
+            else:
+                completion_str = f" {state_others}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+    def step_model_inference_str(self, target_i: int):
+        """Return a model inference string for the step |target_i|"""
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
             state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
             state_obs = self.strip_state(str(state_obs))
             state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
-            state_others = self.strip_state(str(state_others))
+            state_others = self.strip_state(self.dict_to_str(state_others))
+            if i == target_i:
+                return string_repr + f"step {i} state: [{state_obs},{state_others}] action: [ {action} ]\n"
+
+    def imitation_inference_str(self):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            # TODO(experiment with a summary version).
+            if i < len(self) - 8:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
             string_repr += f"step {i} state: [{state_obs},"
             if i < len(self) - 1:
-                string_repr += f"{state_others}] action: [ {action} ]\n"
+                string_repr += f"action: [ {action} ]\n"
             else:
-                completion_str = f" {state_others}] action: [ {action} ]\n"
+                completion_str = f"action: [ {action} ]\n"
         return string_repr, completion_str
 
     def __str__(self):

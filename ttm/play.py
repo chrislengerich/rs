@@ -47,7 +47,7 @@ def metalearn(agent, max_train_epochs=1):
 def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str="",
                  seed: int=994, max_actions=3):
     """Builds a game and run rollouts in that game"""
-    game = agent.build_game(7, 3, seed)
+    game = agent.build_game(7, 10, seed)
     env = setup_game(game)
     goal = get_goal(env)
     print(f"goal is '{goal}'")
@@ -68,6 +68,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         rollout = Rollout(trajectory, goal, scores, agent={"name": agent.name, "engine": agent.engine})
         while not done and actions < max_actions:
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
+            print(rollout)
             state = {"obs": obs}
             trajectory.append([state, goal, "blank"])
             if new_policy != "" and actions == 0:
@@ -75,12 +76,11 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
             else:
                 metalearn_action, dict_update, formatted_query = agent.predict_rollout(rollout)
                 # carry through the summary.
-                if dict_update['summary'] == '' and len(trajectory) > 1:
+                if 'summary' in dict_update and dict_update['summary'] == '' and len(trajectory) > 1:
                     dict_update['summary'] = trajectory[-2][0]['summary']
             state.update(dict_update)
             # agent.get_metalearning_action(
             # HumanAgent(metalearn_goal), obs, metalearn_rollout)
-            print(f"metalearn action >>>> {metalearn_action} <<<<")
             matched = False
             for p in known_policies:
                 if re.match(f".*{p}.*", metalearn_action):
