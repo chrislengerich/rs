@@ -8,6 +8,8 @@ import textworld.gym
 import time
 import pickle
 
+from jericho import FrotzEnv
+
 from agent import TransformerAgent, HumanAgent, MetalearnedAgent
 from trajectory import Trajectory, Rollout, Goal
 
@@ -47,9 +49,15 @@ def metalearn(agent, max_train_epochs=1):
 def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str="",
                  seed: int=994, max_actions=3):
     """Builds a game and run rollouts in that game"""
-    game = agent.build_game(7, 10, seed)
-    env = setup_game(game)
-    goal = get_goal(env)
+    #game = agent.build_game(7, 4, seed)
+    if False: # TextWorld game
+        game = agent.build_treasure_hunter(1)
+        env = setup_game(game)
+        goal = get_goal(env)
+    else:
+        game = "zork1.z5"
+        env = FrotzEnv(f"jericho_games/z-machine-games-master/jericho-game-suite/{game}")
+        goal = "explore, get points, don't die"
     print(f"goal is '{goal}'")
     max_actions = max_actions  # 3
     max_rollouts = 1  # 10
@@ -66,9 +74,9 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         trajectory.append([{"obs": "", "summary": "", "expectation": "", "update": ""}, goal, "start"])
         scores = []
         rollout = Rollout(trajectory, goal, scores, agent={"name": agent.name, "engine": agent.engine})
-        while not done and actions < max_actions:
+        while not done and (actions < max_actions or (agent.name == 'human' and game != "zork1.z5")):
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
-            print(rollout)
+            #print(rollout)
             state = {"obs": obs}
             trajectory.append([state, goal, "blank"])
             if new_policy != "" and actions == 0:
@@ -98,7 +106,10 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 #print(infos)
                 scores.append(score)
                 print(scores)
-                env.render()
+                if game == "zork1.z5":
+                    print(obs)
+                else:
+                    env.render()
             actions += 1
         rollouts.append(rollout)
 
@@ -108,7 +119,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
     print(f"Train epochs: {train_epochs}")
     print(f"Agent fitness: {fitness}")
     print(f"Agent learning: {learning}")
-    if policy != "" and fitness > 0:
+    if policy != "" and (fitness > 0 or game == "zork1.z5"):
         print("Saving agent trajectory")
         return agent.write_rollouts(rollouts, game, policy)
     else:

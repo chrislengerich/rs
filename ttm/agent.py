@@ -60,12 +60,22 @@ class Agent:
         self.append_state(f"build_game: world_size: {world_size} seed: {seed}")
         if not seed:
             seed = random.randint(0, 100000)
-        name = f"grounding_game_{world_size}_{seed}_{quest_length}.z8"
+        args_hash = "only_last_goal"
+        name = f"grounding_game_{world_size}_{seed}_{quest_length}_{args_hash}.z8"
         subprocess.check_output(
             ["tw-make", "custom", "--world-size", str(world_size), "--nb-objects", "4", "--quest-length",
              str(quest_length),
              "--seed",
-             str(seed), "--output", f"tw_games/{name}"])
+             str(seed), "--output", f"tw_games/{name}", "--only-last-action"])
+        return name
+
+    def build_treasure_hunter(self, level: int = 1) -> str:
+        """Builds a text-world game at a specific difficulty level, returning the game name."""
+        self.append_state(f"build_treasure_hunter: level: {level}")
+        level = 20
+        name = f"grounding_game_treasure_hunter_{level}.z8"
+        subprocess.check_output(
+            ["tw-make", "tw-treasure_hunter", "--level", str(level), "--output", f"tw_games/{name}", "--force"])
         return name
 
     def write_rollouts(self, rollouts: List[Rollout], game: str, policy: str):
@@ -108,6 +118,18 @@ class GPT3Agent(Agent):
     engine = "curie:ft-personal-2021-12-23-00-17-19" # 0.45c
     engine = "curie:ft-personal-2021-12-23-03-10-44" # 0.91c - k = 8 sliding window of observations, 131 examples.
     engine = "curie:ft-personal-2021-12-23-03-58-03" # 0.53c - k = 8 imitation learned variant, 131 examples.
+    engine = "curie:ft-personal-2021-12-23-23-52-22" # 2.18c - bootstrapped with about 2x the data from
+    engine = "curie:ft-personal-2021-12-24-00-11-46" # 2.10c - same as above ^, minus the test data.
+    engine = "curie:ft-personal-2021-12-24-04-58-46" # 1.12c - 156 examples, starting to intentionally ask questions.
+    engine = "curie:ft-personal-2021-12-24-06-29-10" # 1.24c - 165 examples.
+    engine = "curie:ft-personal-2021-12-24-19-53-54" # 1.36c - 181 examples, based on partial exploration towards a
+    engine = "curie:ft-personal-2021-12-24-20-54-46" # 1.55c - 199 examples (50 with error conditions).
+    engine = "curie:ft-personal-2021-12-25-17-54-43" # 1.57c - 207 examples (50 + 60 with error correction).
+    engine = "curie:ft-first-cap-2021-12-25-18-57-54" # 2.67c - 348 examples.
+    engine = "curie:ft-first-cap-2021-12-25-21-30-24" # 1.93c - 231 examples.
+
+    # goal.
+    # machine-learned variants.
     #engine = "davinci-instruct-beta"
 
     def __init__(self, agent_goal: str, device=0, path: str="ttm/data/whatcanido"):
@@ -143,6 +165,7 @@ class GPT3Agent(Agent):
     def predict(self, prompt: str):
         """Dispatches a query to GPT-3."""
         openai.api_key = os.getenv("OPENAI_API_KEY")
+        openai.organization = os.getenv("OPENAI_ORGANIZATION")
         #engine = "curie:ft-personal-2021-12-20-02-09-16"
         #engine = "curie:ft-personal-2021-12-20-04-07-04"
         #engine = "curie:ft-personal-2021-12-20-05-42-41"
@@ -150,6 +173,7 @@ class GPT3Agent(Agent):
         #engine="curie:ft-personal-2021-12-20-16-07-06"
         #engine="curie:ft-personal-2021-12-20-16-56-02"
         #engine="davinci:ft-personal-2021-12-20-17-25-15"
+        engine="curie:ft-personal-2021-12-23-19-48-16"
         print("PROMPT>>>>")
         print(prompt)
         max_tokens = self.length # 100 # 500

@@ -47,7 +47,8 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
       print(f"{game} - {len(rollouts)} - {len(rollouts[0]['trajectory'])}")
       for r in rollouts:
         agent_name = r.agent.get('name', '')
-        if r.fitness() < 1 or not(agent_name == "human" or agent_name == "") or re.match(".*964.*", game):
+        if r.fitness() < 1  or re.match(".*964.*", game) or re.match(".*90[0-3].*",game) or (agent_name != "human"
+                                                                                             and agent_name != ""):
           continue
         total_rollouts +=1
         trajs = r.hindsight_trajectories()

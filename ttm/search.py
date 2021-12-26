@@ -14,7 +14,7 @@ class Search:
     query = rollout["trajectory"].step_model_inference_str(len(rollout["trajectory"][-1]))
     documents_str = []
     for d in documents:
-      if d["trajectory"][0][0] == '': # hack to accomodate the old data format.
+      if d["trajectory"][0][0] == '' or d["trajectory"].goals()[0] != rollout["trajectory"].goals()[0]:
         print("continuing")
         continue
       for i in range(len(d["trajectory"])):
