@@ -4,6 +4,7 @@ import re
 import subprocess
 
 import gym
+import numpy as np
 import textworld.gym
 import time
 import pickle
@@ -49,9 +50,15 @@ def metalearn(agent, max_train_epochs=1):
 def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str="",
                  seed: int=994, max_actions=3):
     """Builds a game and run rollouts in that game"""
-    #game = agent.build_game(7, 4, seed)
-    if False: # TextWorld game
-        game = agent.build_treasure_hunter(1)
+    if True: # TextWorld game
+        #game = agent.build_treasure_hunter(1)
+        # level 1 for cooking:
+        level_1 = [1, 1,True,False,"valid"]
+        level_2 = [1, 1, True, True, "train"]
+        level_3 = [1, 9, False, False, "train"]
+        level_4 = [3, 6, True, True, "train"]
+        game = agent.build_cooking(*level_2)
+        #game = agent.build_game(7, 4, seed)
         env = setup_game(game)
         goal = get_goal(env)
     else:
@@ -121,15 +128,16 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
     print(f"Agent learning: {learning}")
     if policy != "" and (fitness > 0 or game == "zork1.z5"):
         print("Saving agent trajectory")
-        return agent.write_rollouts(rollouts, game, policy)
+        return list(agent.write_rollouts(rollouts, game, policy)) + [fitness, learning]
     else:
-        return "", ""
+        return "", "", fitness, learning
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--policy", default="", help="Policy used as a suffix for the filename")
 parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
 parser.add_argument("--seed", default=1000, help="Random seed")
 parser.add_argument("--max_actions", type=int, default=3, help="Max actions")
+parser.add_argument("--train_epochs", type=int, default=1, help="Max train epochs")
 args = parser.parse_args()
 rollout_path = f"ttm/data/{args.policy}/grounding_data.pkl"
 
@@ -142,14 +150,21 @@ if args.meta_policy == "human":
 else:
     agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{args.meta_policy}/")
 
-max_train_epochs = 1
+max_train_epochs = args.train_epochs
 train_epochs = 0
 fitness = 0
 
 # Meta-learning agent.
 # Currently uses a fixed policy to achieve its objective.
-while train_epochs < max_train_epochs and fitness < 1:
-    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, seed=args.seed, max_actions=args.max_actions)
+fitnesses = []
+learnings = []
+joint_learnings = []
+while train_epochs < max_train_epochs: #and fitness < 1:
+    rollout_txt_path, rollout_pickle_path, fitness, learning = run_rollouts(agent, args.policy, seed=args.seed,
+                                                         max_actions=args.max_actions)
+    fitnesses.append(fitness)
+    learnings.append(learning)
+    joint_learnings.append(learning["joint"])
     #rollouts = data.read_rollouts(rollout_pickle_path)
 
     # metalearning loop for creating new skills.
@@ -200,4 +215,9 @@ while train_epochs < max_train_epochs and fitness < 1:
     # agent.train("ttm/gpt2-metalearn", rollout_path, rollout_path)
 
     # train the agent on the data.
+    print(f"fitness = {fitnesses}")
+    print(f"fitness = {np.mean(fitnesses)}")
+    print(f"learning = {learnings}")
+    print(f"learning = {np.mean(joint_learnings)}")
+    print(f"num saved epochs/total epochs: {len([f for f in fitnesses if f > 0])}/{len(fitnesses)}")
     train_epochs += 1

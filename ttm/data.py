@@ -43,13 +43,26 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
   with open(finetune_filepath, 'w') as f:
     total_rollouts = 0
     total_examples = 0
+    human_examples = 0
+    agent_examples = 0
     for game, rollouts in rollouts_dict.items():
+      print("")
       print(f"{game} - {len(rollouts)} - {len(rollouts[0]['trajectory'])}")
       for r in rollouts:
         agent_name = r.agent.get('name', '')
-        if r.fitness() < 1  or re.match(".*964.*", game) or re.match(".*90[0-3].*",game) or (agent_name != "human"
-                                                                                             and agent_name != ""):
+        if re.match('.*cooking.*', game):
+          print(r.fitness())
+          print(r.learning())
+          print(r.agent['name'])
+        if (r.fitness() < 1 and not re.match(".*zork.*", game))  or re.match(".*964.*", game) or re.match(".*90["
+                                                                                                          "0-3].*",\
+            game) or (agent_name != "human" and agent_name != "" and not ((r.learning()['joint'] > 0.95) and
+                                                                          re.match('.*cooking.*', game) and
+                                                                          r.fitness() >= 2)) or \
+            re.match(
+          ".*valid.*",game) or re.match(".*test.*", game):
           continue
+        print("writing")
         total_rollouts +=1
         trajs = r.hindsight_trajectories()
         for t in trajs:
@@ -65,11 +78,17 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
           else:
             raise Exception(f"Unknown format: {format}")
           total_examples += 1
+          if agent_name == "human" or agent_name == "":
+            human_examples += 1
+          else:
+            agent_examples += 1
           j = {"prompt": prompt, "completion": " " + completion}
           f.write(json.dumps(j))
           f.write('\n')
     print(f"total_rollouts: {total_rollouts}")
     print(f"total_examples: {total_examples}")
+    print(f"total_human: {human_examples}")
+    print(f"total_agent: {agent_examples}")
 
 def read_rollouts(rollouts_filepath: str):
   """Reads rollouts from the pickle file."""

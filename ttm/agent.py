@@ -69,6 +69,26 @@ class Agent:
              str(seed), "--output", f"tw_games/{name}", "--only-last-action"])
         return name
 
+    def build_cooking(self, recipe_size: int, locations: int, cut: bool, cook: bool, split: str, seed: int = None) -> \
+        str:
+        """Builds a text-world game at a specific difficulty level, returning the game name."""
+        self.append_state(f"build_cooking: {recipe_size} {locations} {cut} {cook}")
+        if not seed:
+            seed = random.randint(0, 100000)
+        name = f"grounding_game_cooking_{recipe_size}_{locations}_{cut}_{cook}_{split}_{seed}.z8"
+        attribute_string = " " + ("--cut " if cut else "") + ("--cook" if cook else "")
+        input_string = ["tw-make", "tw-cooking", "--recipe", str(recipe_size), "--go", str(locations), "--seed",
+                        str(seed)] + \
+                       [l.strip() for l in attribute_string.split()] + ["--split", split, "--output", f"tw_games"
+                                                                                                      f"/{name}"]
+        try:
+            subprocess.check_output(
+                input_string
+            )
+        except Exception as e:
+            print(e)
+        return name
+
     def build_treasure_hunter(self, level: int = 1) -> str:
         """Builds a text-world game at a specific difficulty level, returning the game name."""
         self.append_state(f"build_treasure_hunter: level: {level}")
@@ -127,6 +147,13 @@ class GPT3Agent(Agent):
     engine = "curie:ft-personal-2021-12-25-17-54-43" # 1.57c - 207 examples (50 + 60 with error correction).
     engine = "curie:ft-first-cap-2021-12-25-18-57-54" # 2.67c - 348 examples.
     engine = "curie:ft-first-cap-2021-12-25-21-30-24" # 1.93c - 231 examples.
+    engine = "curie:ft-first-cap-2021-12-26-23-09-47" # 2.02c - 243 examples.
+    engine = "curie:ft-first-cap-2022-01-02-05-47-06" # 2.08c - 250 examples (one kitchen example).
+    engine = "curie:ft-first-cap-2022-01-02-16-42-19" # 2.53c - 289 examples (five human-labeled kitchen examples).
+    engine = "curie:ft-first-cap-2022-01-02-19-03-10" # 2.89c - 330 examples (added 41-agent generated examples)
+    engine = "curie:ft-first-cap-2022-01-02-19-45-46" # 3.40c - 378 examples (89 agent examples)
+
+    # automatically-generated hypothesis tests).
 
     # goal.
     # machine-learned variants.
@@ -388,8 +415,6 @@ class HumanAgent(Agent):
         state = {"summary": summary, "expectation": expectation, "update": update}
         action = input("action: ")
         return action, state, ""
-
-
 
         
 

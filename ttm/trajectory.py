@@ -85,8 +85,8 @@ class Trajectory(list):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
-            # TODO(experiment with a summary version).
-            if i < len(self) - 7:
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
                 continue
             state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
             state_obs = self.strip_state(str(state_obs))
@@ -98,6 +98,12 @@ class Trajectory(list):
             else:
                 completion_str = f" {state_others}] action: [ {action} ]\n"
         return string_repr, completion_str
+
+    def trim_commas(self, state):
+        for k in state.keys():
+            state[k] = str(state[k]).replace(",", " ")
+            state[k] = re.sub("[\s][\s]*", " ", state[k])
+        return state
 
     def step_model_inference_str(self, target_i: int):
         """Return a model inference string for the step |target_i|"""
