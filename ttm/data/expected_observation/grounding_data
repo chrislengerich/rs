@@ -1,0 +1,29 @@
+goal: [Hey, thanks for coming over to TextWorld! Please toss the napkin on the floor of the launderette. > -= Launderette =-0/2]
+step 0 state: [{'obs': '', 'summary': '', 'expectation': '', 'update': ''}] action: [start]
+step 1 state: [{'obs': 'You make out a locked Canadian safe here. You make out a drawer.\n\n\n\n> -= Launderette =-0/1', 'summary': 'my goal is to toss the napkin on the floor of the launderette.', 'expectation': 'napkin is tossed', 'update': 0}] action: [toss napkin]
+
+goal: [Hey, thanks for coming over to TextWorld! Please toss the napkin on the floor of the launderette. > -= Launderette =-0/2]
+step 0 state: [{'obs': '', 'summary': '', 'expectation': '', 'update': ''}] action: [start]
+step 1 state: [{'obs': 'You make out a locked Canadian safe here. You make out a drawer.\n\n\n\n> -= Launderette =-0/1', 'summary': 'my goal is to toss the napkin on the floor of the launderette.', 'expectation': 'napkin is tossed', 'update': 0}] action: [toss napkin]
+step 2 state: [{'obs': "\nThat's not a verb I recognise.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to toss the napkin on the floor of the launderette. I can\'t use the verb "toss"', 'expectation': 'napkin is thrown', 'update': 1}] action: [throw napkin on floor]
+
+goal: [Hey, thanks for coming over to TextWorld! Please toss the napkin on the floor of the launderette. > -= Launderette =-0/2]
+step 0 state: [{'obs': '', 'summary': '', 'expectation': '', 'update': ''}] action: [start]
+step 1 state: [{'obs': 'You make out a locked Canadian safe here. You make out a drawer.\n\n\n\n> -= Launderette =-0/1', 'summary': 'my goal is to toss the napkin on the floor of the launderette.', 'expectation': 'napkin is tossed', 'update': 0}] action: [toss napkin]
+step 2 state: [{'obs': "\nThat's not a verb I recognise.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to toss the napkin on the floor of the launderette. I can\'t use the verb "toss"', 'expectation': 'napkin is thrown', 'update': 1}] action: [throw napkin on floor]
+step 3 state: [{'obs': "\nYou can't see any such thing.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to toss the napkin on the floor of the launderette. I can\'t use the verb "toss". I can\'t use the word "floor", maybe.', 'expectation': 'napkin is thrown on the floor', 'update': 0}] action: [throw napkin]
+
+goal: [Your objective is to place the laptop on the floor of the launderette. > -= Launderette =-0/2]
+step 0 state: [{'obs': '', 'summary': '', 'expectation': '', 'update': ''}] action: [start]
+step 1 state: [{'obs': "\n\nThere is an exit to the west. Don't worry, it is unblocked.\n\n> -= Launderette =-0/1", 'summary': 'You need to place the laptop on the floor of the launderette', 'expectation': 'Laptop is on floor, score goes up by one', 'update': 0}] action: [place laptop]
+
+goal: [Your objective is to place the laptop on the floor of the launderette. > -= Launderette =-0/2]
+step 0 state: [{'obs': '', 'summary': '', 'expectation': '', 'update': ''}] action: [start]
+step 1 state: [{'obs': "\n\nThere is an exit to the west. Don't worry, it is unblocked.\n\n> -= Launderette =-0/1", 'summary': 'You need to place the laptop on the floor of the launderette', 'expectation': 'Laptop is on floor, score goes up by one', 'update': 0}] action: [place laptop]
+step 2 state: [{'obs': "\nThat's not a verb I recognise.\n\n> -= Launderette =-0/1", 'summary': 'You need to place the laptop on the floor of the launderette. You can\'t use the verb "place."', 'expectation': 'Laptop is put on floor', 'update': 1}] action: [put laptop down]
+
+goal: [Hey, thanks for coming over to TextWorld! Please drop the fly larva on the floor of the launderette. > -= Launderette =-0/2]
+step 0 state: [{'obs': '', 'summary': '', 'expectation': '', 'update': ''}] action: [start]
+step 1 state: [{'obs': "You can see a table. But oh no! there's nothing on this piece of garbage. It would have been so cool if there was stuff on the table.\n\nThere is an unblocked exit to the west.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to drop the fly larva on the floor of the launderette', 'expectation': 'fly larva is dropped', 'update': 0}] action: [drop fly larva]
+
+{model_inference_str}

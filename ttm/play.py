@@ -1,4 +1,5 @@
 import argparse
+import copy
 import random
 import re
 import subprocess
@@ -54,7 +55,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         #game = agent.build_treasure_hunter(1)
         # level 1 for cooking:
         level_1 = [1, 1,True,False,"valid"]
-        level_2 = [1, 1, True, True, "train"]
+        level_2 = [1, 1, True, True, "valid"]
         level_3 = [1, 9, False, False, "train"]
         level_4 = [3, 6, True, True, "train"]
         game = agent.build_cooking(*level_2)
@@ -62,7 +63,11 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         env = setup_game(game)
         goal = get_goal(env)
     else:
-        game = "zork1.z5"
+        #game = "enchanter.z3"
+        #game = "enter.z5"
+        game = "gold.z5"
+        #game = "dragon.z5"
+        #game = "zork1.z5"
         env = FrotzEnv(f"jericho_games/z-machine-games-master/jericho-game-suite/{game}")
         goal = "explore, get points, don't die"
     print(f"goal is '{goal}'")
@@ -78,10 +83,11 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         score, actions, done = 0, 0, False
         trajectory = Trajectory()
         goal = Goal(goal)
-        trajectory.append([{"obs": "", "summary": "", "expectation": "", "update": ""}, goal, "start"])
+        trajectory.append([{"obs": "", "summary": "", "expectation": "", "update": "", "next_update": ""}, goal, \
+                                                                                                            "start"])
         scores = []
         rollout = Rollout(trajectory, goal, scores, agent={"name": agent.name, "engine": agent.engine})
-        while not done and (actions < max_actions or (agent.name == 'human' and game != "zork1.z5")):
+        while (actions < max_actions): # or (agent.name == 'human' and game != "zork1.z5")):
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
             #print(rollout)
             state = {"obs": obs}
@@ -94,8 +100,34 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 if 'summary' in dict_update and dict_update['summary'] == '' and len(trajectory) > 1:
                     dict_update['summary'] = trajectory[-2][0]['summary']
             state.update(dict_update)
-            # agent.get_metalearning_action(
-            # HumanAgent(metalearn_goal), obs, metalearn_rollout)
+
+            if done:
+                break
+
+            teacher_forcing = True
+            if teacher_forcing: # using teacher forcing to rewrite the action.
+                aux_agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/obs_summary_t_to_expectation_action/")
+                old_metalearn_action = metalearn_action
+                metalearn_action, dict_update, formatted_query = aux_agent.predict_rollout(rollout, value=True)
+                print(f"ACTION_UPDATE >>>> {old_metalearn_action} -> {metalearn_action}")
+                state.update(dict_update)
+
+                # rollout_copy = copy.deepcopy(rollout)
+                # rollout_copy["trajectory"] = rollout.hindsight_trajectory(rollout_copy["trajectory"])
+                # rollout_copy["trajectory"][-1][0]["next_update"] = rollout_copy["trajectory"][-1][0]["expectation"]
+                # old_metalearn_action = metalearn_action
+                # metalearn_action, _, formatted_query = aux_agent.predict_rollout(rollout_copy)
+                # print(f"ACTION_UPDATE >>>> {old_metalearn_action} -> {metalearn_action}")
+                # rollout["trajectory"][-1][0]["action"] = metalearn_action
+
+            # given updates, summaries, expectations and actions, predict the current update + summary + expectations (
+            # training the WM) -> this is already done by the default model, no need to retrain.
+
+            # given updates, summaries, expectations and actions + current turn's update + summary + expectations,
+            # predict the next turn's update + action -> this needs to be trained.
+            # Write out data with next_turn's update.
+
+            # At inference time, substitute the model expectations for the next turn's update.
             matched = False
             for p in known_policies:
                 if re.match(f".*{p}.*", metalearn_action):
@@ -113,11 +145,15 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 #print(infos)
                 scores.append(score)
                 print(scores)
-                if game == "zork1.z5":
+                if isinstance(env, FrotzEnv):
                     print(obs)
                 else:
                     env.render()
             actions += 1
+            print(f"Learning: {rollout.learning()['joint']}")
+            if rollout.learning()['joint'] < 0.85: # early exit from failing rollouts in the wrong part of the data
+                # distribution.
+                  break
         rollouts.append(rollout)
 
     most_recent_game = rollouts[-1]
@@ -126,11 +162,11 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
     print(f"Train epochs: {train_epochs}")
     print(f"Agent fitness: {fitness}")
     print(f"Agent learning: {learning}")
-    if policy != "" and (fitness > 0 or game == "zork1.z5"):
+    if True: #policy != "" and (fitness > 0 or game == "zork1.z5"):
         print("Saving agent trajectory")
-        return list(agent.write_rollouts(rollouts, game, policy)) + [fitness, learning]
+        return list(agent.write_rollouts(rollouts, game, policy)) + [fitness, learning, actions]
     else:
-        return "", "", fitness, learning
+        return "", "", fitness, learning, actions
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--policy", default="", help="Policy used as a suffix for the filename")
@@ -159,11 +195,15 @@ fitness = 0
 fitnesses = []
 learnings = []
 joint_learnings = []
+lengths = []
+
 while train_epochs < max_train_epochs: #and fitness < 1:
-    rollout_txt_path, rollout_pickle_path, fitness, learning = run_rollouts(agent, args.policy, seed=args.seed,
+    rollout_txt_path, rollout_pickle_path, fitness, learning, length = run_rollouts(agent, args.policy,
+                                                                                      seed=args.seed,
                                                          max_actions=args.max_actions)
     fitnesses.append(fitness)
     learnings.append(learning)
+    lengths.append(length)
     joint_learnings.append(learning["joint"])
     #rollouts = data.read_rollouts(rollout_pickle_path)
 
@@ -217,7 +257,10 @@ while train_epochs < max_train_epochs: #and fitness < 1:
     # train the agent on the data.
     print(f"fitness = {fitnesses}")
     print(f"fitness = {np.mean(fitnesses)}")
+    print(f"std dev fitness = {np.std(fitnesses)}")
     print(f"learning = {learnings}")
     print(f"learning = {np.mean(joint_learnings)}")
+    print(f"lengths = {lengths}")
+    print(f"lengths = {np.mean(lengths)}")
     print(f"num saved epochs/total epochs: {len([f for f in fitnesses if f > 0])}/{len(fitnesses)}")
     train_epochs += 1

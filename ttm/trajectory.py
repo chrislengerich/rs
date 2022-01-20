@@ -69,8 +69,7 @@ class Trajectory(list):
                 string_repr += f"{state}] action: [{action}]\n"
         return string_repr
 
-    def dict_to_str(self, dict):
-        causal_order = ["update", "summary", "expectation"]
+    def dict_to_str(self, dict, causal_order=["update", "summary", "expectation", "next_update"]):
         string_repr = ""
         for i,c in enumerate(causal_order):
             if c in dict:
@@ -91,17 +90,137 @@ class Trajectory(list):
             state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
             state_obs = self.strip_state(str(state_obs))
             state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
-            state_others = self.strip_state(self.dict_to_str(state_others))
+            state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                "summary", "next_obs"]))
+            if i == len(self) - 2:
+                state_others_context = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                    "summary"]))
+            else:
+                state_others_context = "" #self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))
+            #state_others_pred = ""
+            state_prefix = f"step {i} " # unused for now.
+            string_repr += f"state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others_context}] action: [ {action} ]\n"
+            else:
+                completion_str = f" {state_others_pred}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+    def obs_summary_t_to_expectation_action_str(self):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                "next_obs"]))
+            if i == len(self) - 1:
+                state_others_context = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                    "summary"]))
+            else:
+                state_others_context = ""  # self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))
+            # state_others_pred = ""
+            state_prefix = f"step {i} "  # unused for now.
+            string_repr += f"state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others_context}] action: [ {action} ]\n"
+            else:
+                string_repr += f"{state_others_context}"
+                completion_str = f" {state_others_pred}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+    def expected_observation_key(self, key:str):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs",
+                                                                                              f"next_{key}"]))
+            state_others_context = ""
+            #state_others_pred = ""
+            state_prefix = f"step {i} " # unused for now.
+            string_repr += f"state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others_context}] action: [ {action} ]\n"
+            else:
+                completion_str = f" {state_others_pred}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+    def expected_observation(self):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))
+            state_others_context = ""
+            #state_others_context = self.strip_state(self.dict_to_str(state_others, causal_order=["update", "summary"]))
+            #state_others_pred = ""
+            state_prefix = f"step {i} " # unused for now.
+            string_repr += f"state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others_context}] action: [ {action} ]\n"
+            else:
+                completion_str = f" {state_others_pred}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+    def model_expectation_inference_str(self):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others = self.strip_state(self.dict_to_str(state_others, causal_order=["update", "summary", "expectation", "next_update"]))
             string_repr += f"step {i} state: [{state_obs},"
             if i < len(self) - 1:
                 string_repr += f"{state_others}] action: [ {action} ]\n"
             else:
-                completion_str = f" {state_others}] action: [ {action} ]\n"
+                completion_str = f"{state_others}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+
+    def model_action_inference_str(self):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = self.strip_state(
+                self.dict_to_str(state, causal_order=["obs", "summary", "next_update"]))
+            string_repr += f"step {i} state: [{state_obs}] "
+            if i < len(self) - 1:
+                string_repr += f"action: [ {action} ]\n"
+            else:
+                completion_str = f"action: [ {action} ]\n"
         return string_repr, completion_str
 
     def trim_commas(self, state):
         for k in state.keys():
-            state[k] = str(state[k]).replace(",", " ")
+            state[k] = str(state[k])
+            #state[k] = str(state[k]).replace(",", " ")
             state[k] = re.sub("[\s][\s]*", " ", state[k])
         return state
 
@@ -171,19 +290,38 @@ class Rollout(dict):
         return {"action_diversity": action_diversity, "obs_diversity": obs_diversity, "blank_ratio": blank_ratio,
                 "obs_diversity": \
             obs_diversity, "joint": np.mean([action_diversity, obs_diversity, (1- blank_ratio)])}
+
+    def hindsight_trajectory(self, trajectory: Trajectory, unused_format: str):
+        num_obs = 1
+        for i in range(len(trajectory) - num_obs):
+            # prior: obs
+            # current data = update
+            composite_obs = " || ".join([trajectory[i + j][0]['obs'] for j in range(1, num_obs + 1)])
+            trajectory[i][0]['next_obs'] = composite_obs
+            if 'update' in trajectory[i+1][0]:
+                composite_obs = " || ".join([str(trajectory[i + j][0]['update']) for j in range(1, num_obs + 1)])
+                trajectory[i][0]['next_update'] = composite_obs # add a key for
+            if 'summary' in trajectory[i+1][0]:
+                composite_obs = " || ".join([trajectory[i + j][0]['summary'] for j in range(1, num_obs + 1)])
+                trajectory[i][0]['next_summary'] = composite_obs # add a key for
+            if 'expectation' in trajectory[i + 1][0]:
+                composite_obs = " || ".join([trajectory[i + j][0]['expectation'] for j in range(1, num_obs + 1)])
+                trajectory[i][0]['next_expectation'] = composite_obs  # add a key for
+            # updates.
+        #trajectory[-1][0]['next_update'] = 'end'
+        new_trajectory = copy.deepcopy(trajectory)
+
+        return new_trajectory[:-num_obs]
     
-    def hindsight_trajectories(self):
+    def hindsight_trajectories(self, format: str =""):
         trajectories = []
+        if isinstance(self["trajectory"].states()[0], str):
+            return trajectories
+        self["trajectory"] = self.hindsight_trajectory(self["trajectory"], format)
         for i in range(2,len(self["trajectory"])+1):
-            #print(f"i={i}")
             if len(self["trajectory"]) >= 2:
-                #print(f"i={i}")
                 new_traj = Trajectory(copy.deepcopy(self["trajectory"][:i]))
-                # hindsight_goal = self.hindsight_goal(new_traj)
-                # for i in range(len(new_traj)):
-                #     new_traj[i][1] = hindsight_goal
                 trajectories.append(new_traj)
-        #print(len(trajectories))
         return trajectories
     
     

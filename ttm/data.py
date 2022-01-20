@@ -1,7 +1,9 @@
+import copy
 import os.path
 import pickle
 import json
 import re
+from collections import Counter
 
 
 def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt', format='model_inference_str'):
@@ -26,7 +28,7 @@ def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt
             if format == "imagination_action_str":
               line = t.imagination_action_str()
             elif format == "model_inference_str":
-              if r["trajectory"].states()[0] == "":  # old format for state as a string.
+              if t.states()[0] == "":  # old format for state as a string.
                 continue
               model_inference = t.model_inference_str()
               line = model_inference[0] + " " + model_inference[1]
@@ -45,6 +47,7 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
     total_examples = 0
     human_examples = 0
     agent_examples = 0
+    rollouts_per_game = {}
     for game, rollouts in rollouts_dict.items():
       print("")
       print(f"{game} - {len(rollouts)} - {len(rollouts[0]['trajectory'])}")
@@ -54,17 +57,25 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
           print(r.fitness())
           print(r.learning())
           print(r.agent['name'])
-        if (r.fitness() < 1 and not re.match(".*zork.*", game))  or re.match(".*964.*", game) or re.match(".*90["
-                                                                                                          "0-3].*",\
-            game) or (agent_name != "human" and agent_name != "" and not ((r.learning()['joint'] > 0.95) and
-                                                                          re.match('.*cooking.*', game) and
-                                                                          r.fitness() >= 2)) or \
-            re.match(
-          ".*valid.*",game) or re.match(".*test.*", game):
+
+        # or re.match(".*enter.*", game) or re.match(".*enchanter.*", game)
+        # re.match(".*zork.*", game) or re.match(".*dragon.*", game) or
+        if not ((agent_name == "human" or r.fitness() >= 2) and ((re.match(
+            ".*train.*",game)))):
+        # if (r.fitness() < 1 and not re.match(".*zork.*", game))  or re.match(".*964.*", game) or re.match(".*90["
+        #                                                                                                   "0-3].*",\
+        #     game) or (agent_name != "human" and agent_name != "" and not ((r.learning()['joint'] > 0.70) and
+        #            re.match('.*cooking.*', game) and
+        #            r.fitness() >= 1)) or \
+        #     re.match(".*valid.*",game) or re.match(".*test.*", game) or not re.match(".*cooking.*", game) or (
+        #     agent_name != "human"):
           continue
         print("writing")
+
+        # TODO: Only use human trajectories here.
+
         total_rollouts +=1
-        trajs = r.hindsight_trajectories()
+        trajs = r.hindsight_trajectories(format)
         for t in trajs:
           if t[0][0] == '':
             print("continuing")
@@ -73,8 +84,20 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
             continue
           if format == "model_inference_str":
             prompt, completion = t.model_inference_str()
+          elif format == "model_expectation_inference_str":
+            prompt, completion = t.model_expectation_inference_str()
+          elif format == "model_action_inference_str":
+            prompt, completion = t.model_action_inference_str()
           elif format == "imitation_inference_str":
             prompt, completion = t.imitation_inference_str()
+          elif format == "expected_observation_update":
+            prompt, completion = t.expected_observation_key("update")
+          elif format == "expected_observation_summary":
+            prompt, completion = t.expected_observation_key("summary")
+          elif format == "obs_summary_t_to_expectation_action":
+            prompt, completion = t.obs_summary_t_to_expectation_action_str()
+          elif format == "expected_observation":
+            prompt, completion = t.expected_observation()
           else:
             raise Exception(f"Unknown format: {format}")
           total_examples += 1
@@ -82,13 +105,123 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
             human_examples += 1
           else:
             agent_examples += 1
+          if re.match('.*cooking.*', game):
+            game_title = "cooking"
+          else:
+            game_title = game
+          current_count = rollouts_per_game.setdefault(game_title, 0)
+          rollouts_per_game[game_title] = current_count + 1
           j = {"prompt": prompt, "completion": " " + completion}
           f.write(json.dumps(j))
           f.write('\n')
+    print(rollouts_per_game)
     print(f"total_rollouts: {total_rollouts}")
     print(f"total_examples: {total_examples}")
     print(f"total_human: {human_examples}")
     print(f"total_agent: {agent_examples}")
+
+
+def write_reward_policy(rollouts_filepath='rollouts.pkl', finetune_filepath='rollouts.txt',
+                            format='model_inference_str'):
+  rollouts_dict = read_rollouts(rollouts_filepath)
+  rollouts_by_fitness = []
+
+  with open(finetune_filepath, 'w') as f:
+    total_rollouts = 0
+    total_examples = 0
+    human_examples = 0
+    agent_examples = 0
+    rollouts_per_game = {}
+    for game, rollouts in rollouts_dict.items():
+      print("")
+      print(f"{game} - {len(rollouts)} - {len(rollouts[0]['trajectory'])}")
+      for r in rollouts:
+        agent_name = r.agent.get('name', '')
+        if re.match('.*cooking.*', game):
+          print(r.fitness())
+          print(r.learning())
+          print(r.agent['name'])
+
+        if not ((re.match(
+            ".*train.*",game))):
+          continue
+        print("writing")
+
+        total_rollouts +=1
+        trajs = r.hindsight_trajectories(format)
+        for t in trajs:
+          if t[0][0] == '':
+            print("continuing")
+            print(t)
+            print("")
+            continue
+          if format == "model_inference_str":
+            prompt, completion = t.model_inference_str()
+          elif format == "model_expectation_inference_str":
+            prompt, completion = t.model_expectation_inference_str()
+          elif format == "model_action_inference_str":
+            prompt, completion = t.model_action_inference_str()
+          elif format == "imitation_inference_str":
+            prompt, completion = t.imitation_inference_str()
+          elif format == "expected_observation_update":
+            prompt, completion = t.expected_observation_key("update")
+          elif format == "expected_observation_summary":
+            prompt, completion = t.expected_observation_key("summary")
+          elif format == "expected_observation":
+            prompt, completion = t.expected_observation()
+          else:
+            raise Exception(f"Unknown format: {format}")
+          total_examples += 1
+          if agent_name == "human" or agent_name == "":
+            human_examples += 1
+          else:
+            agent_examples += 1
+          if re.match('.*cooking.*', game):
+            game_title = "cooking"
+          else:
+            game_title = game
+          current_count = rollouts_per_game.setdefault(game_title, 0)
+          rollouts_per_game[game_title] = current_count + 1
+          j = {"prompt": prompt, "completion": " " + completion, "fitness": r.fitness(), "agent": r.agent['name']}
+          rollouts_by_fitness.append(j)
+
+    sorted_rollouts = sorted(rollouts_by_fitness, key=lambda x: x['fitness'], reverse=True)
+    print(sorted_rollouts[:5])
+    print(sorted_rollouts[-5:])
+    top_rollouts = sorted_rollouts[:100]
+    print("top rollouts")
+    stats(top_rollouts)
+    bottom_rollouts = sorted_rollouts[-100:]
+    print("bottom rollouts")
+    stats(bottom_rollouts)
+
+    for j in top_rollouts:
+      j_copy = copy.deepcopy(j)
+      j_copy['prompt'] += j_copy['completion']
+      j_copy["completion"] = "good"
+      del j_copy['fitness']
+      del j_copy['agent']
+      f.write(json.dumps(j_copy))
+      f.write('\n')
+
+    for j in bottom_rollouts:
+      j_copy = copy.deepcopy(j)
+      j_copy['prompt'] += j_copy['completion']
+      j_copy["completion"] = "bad"
+      del j_copy['fitness']
+      del j_copy['agent']
+      f.write(json.dumps(j_copy))
+      f.write('\n')
+
+    print(rollouts_per_game)
+    print(f"total_rollouts: {total_rollouts}")
+    print(f"total_examples: {total_examples}")
+    print(f"total_human: {human_examples}")
+    print(f"total_agent: {agent_examples}")
+
+def stats(rollouts):
+  c = Counter([r['agent'] for r in rollouts])
+  print(c.most_common())
 
 def read_rollouts(rollouts_filepath: str):
   """Reads rollouts from the pickle file."""

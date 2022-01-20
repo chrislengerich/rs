@@ -4,6 +4,8 @@ import pickle
 import pprint
 
 import subprocess
+
+import numpy as np
 from transformers import OpenAIGPTTokenizer, OpenAIGPTModel, OpenAIGPTLMHeadModel, AdamW, \
     DataCollatorForLanguageModeling, AutoModelForCausalLM, LineByLineTextDataset
 from transformers import pipeline, set_seed
@@ -152,8 +154,62 @@ class GPT3Agent(Agent):
     engine = "curie:ft-first-cap-2022-01-02-16-42-19" # 2.53c - 289 examples (five human-labeled kitchen examples).
     engine = "curie:ft-first-cap-2022-01-02-19-03-10" # 2.89c - 330 examples (added 41-agent generated examples)
     engine = "curie:ft-first-cap-2022-01-02-19-45-46" # 3.40c - 378 examples (89 agent examples)
+    engine = "curie:ft-first-cap-2022-01-02-20-26-15" # 2.37c - 317 fitness 2 and above trajectories.
+    engine = "curie:ft-first-cap-2022-01-02-21-12-08" # 2.65c - 343 fitness 2 and above trajectories (289 human, 54 agent).
+    engine = "curie:ft-first-cap-2022-01-02-21-12-08"  # 2.65c - train set = 1.25-1.5, 353 fitness 2 and above, 289 human, 54 agent).
+    engine = "curie:ft-first-cap-2022-01-02-22-34-28"
+    engine = "curie:ft-first-cap-2022-01-03-02-42-56" # 3.65 - 407 examples, next_update key included.
+    engine = "curie:ft-first-cap-2022-01-03-03-14-18" # 3.67 - 407 examples, next_update key action model.
+    engine = "curie:ft-first-cap-2022-01-03-07-49-29" # ... - imagination_action_model -> ~289 examples.
+    engine = "curie:ft-first-cap-2022-01-03-08-56-57" # 3.75 - imagination_action_model - 472 examples.
+    engine = "curie:ft-first-cap-2022-01-03-21-40-00" # 9.57 - imagination_action_model with next_update = next_obs -
+    # 825 examples.
+    engine = "curie:ft-first-cap-2022-01-07-23-20-20" # 0.70 - 50 samples Zork, 50 samples cooking.
+    engine = "curie:ft-first-cap-2022-01-08-00-44-11" # 1.39 - 50 samples Zork, 50 samples cooking, 50 samples dragon.
+    engine = "curie:ft-first-cap-2022-01-08-01-55-48" # 1.77 - 50 samples Zork, 50 samples cooking, 50 samples
+    # dragon, 50 samples enchanter, 50 samples enter.
+    engine = "curie:ft-first-cap-2022-01-08-16-58-57"
+    engine = "curie:ft-first-cap-2022-01-08-18-26-42" # 2.84 - 2 more cooking trajectories, 50 Zork, 50 dragon,
+    # 50 enchanter, 50 enter.
+    engine = "curie:ft-first-cap-2022-01-08-23-59-31" # including explicit hypotheses.
+    engine = "curie:ft-first-cap-2022-01-09-05-54-30" # 2.40 - explicit hypotheses.
+    engine = "curie:ft-first-cap-2022-01-09-06-13-59" # 1.29
+    engine = "curie:ft-first-cap-2022-01-09-18-32-54" # 1.61 - 161 examples of explicit hypotheses.
+    engine = "curie:ft-first-cap-2022-01-12-02-31-29" # Adding 1 frame of lookahead.
+    engine = "curie:ft-first-cap-2022-01-12-03-13-31" # Adding 3 frames of lookahead observations.
+    engine = "curie:ft-first-cap-2022-01-12-03-33-41" # Added 5 frames of lookahead observations (105 examples).
+    engine = "curie:ft-first-cap-2022-01-18-00-08-21" # machine expectations, 1 frame.
+    engine = "curie:ft-first-cap-2022-01-18-00-21-47" # machine expectations, 3 frames.
+    engine = "curie:ft-first-cap-2022-01-12-03-50-09" # Removed expectation trajectory labels (imitation learning
+    # baseline with automatically labeled expectation trajectories), 5 frames.
+    engine = "curie:ft-first-cap-2022-01-17-23-50-11" # no expectation trajectory labels (machine or human)
+    engine = "curie:ft-first-cap-2022-01-18-00-53-02" # n=1, expectation, next_update + action prediction
+    engine = "curie:ft-first-cap-2022-01-18-01-10-24" # n=1, summary, next_update + action prediction
+    engine = "curie:ft-first-cap-2022-01-18-01-22-53" # n=1 summary context, (summary, next_update + action) prediction
+    engine = "curie:ft-first-cap-2022-01-18-01-39-17" # n=1, (next_human_update + action)
+    engine = "curie:ft-first-cap-2022-01-18-01-59-07" # n=1, (next obs + next_human_update + action)
+    engine = "curie:ft-first-cap-2022-01-18-02-26-10" # n=1, update context, (update, next human update, action)
+    engine = "curie:ft-first-cap-2022-01-18-02-59-30" # n=1, summary_n-1 context, (summary, obs update, action)
+    engine = "curie:ft-first-cap-2022-01-19-23-05-26" # expected_observation_update
+    engine = "curie:ft-first-cap-2022-01-20-01-45-26" # expected_observation_summary
+    engine = "curie:ft-personal-2022-01-20-02-29-55" # summary, expected_observation
+    engine = "curie:ft-personal-2022-01-20-03-18-06" # context: obs, action predict: expected_obs, action
+    engine = "curie:ft-personal-2022-01-20-03-35-05" # context: obs, update, summary, action predict:  update,
+    # summary, expected_obs, action
+    engine = "curie:ft-personal-2022-01-20-19-29-24" # context: obs, update, summary, action predict:  update,
+    # summary, expected_obs, action. {'cooking': 391}
+    # total_rollouts: 34
+    # total_examples: 391
+    # total_human: 153
+    # total_agent: 238
+    engine = "curie:ft-personal-2022-01-20-20-11-40" # context: obs, update, summary, action predict:  update,
+    # summary, expected_obs, action.
+    # {'cooking': 905}
+    # total_rollouts: 85
+    # total_examples: 905
+    # total_human: 153
+    # total_agent: 752
 
-    # automatically-generated hypothesis tests).
 
     # goal.
     # machine-learned variants.
@@ -168,9 +224,12 @@ class GPT3Agent(Agent):
             for param in ["name", "parse_regex", "engine"]:
                 with open(os.path.join(path, param), "r") as f:
                     self.__dict__[param] = [l.strip().replace('\\\\', '\\') for l in f.readlines()][0]
-            for param in ["length"]:
-                with open(os.path.join(path, param), "r") as f:
-                    self.__dict__[param] = int(f.readlines()[0].strip())
+            for param in ["length", "n"]:
+                if os.path.exists(os.path.join(path, param)):
+                    with open(os.path.join(path, param), "r") as f:
+                        self.__dict__[param] = int(f.readlines()[0].strip())
+                else:
+                    self.__dict__[param] = 1
             for param in ["keys"]:
                 with open(os.path.join(path, param), "r") as f:
                     self.__dict__[param] = json.loads(f.readlines()[0].strip())
@@ -205,15 +264,18 @@ class GPT3Agent(Agent):
         print(prompt)
         max_tokens = self.length # 100 # 500
         print(self.engine)
+        # temperature=1,
         if re.match(".*ft-.*", self.engine):
             response = openai.Completion.create(model=self.engine, prompt=prompt, max_tokens=max_tokens,
-                                            temperature=1, stop="\n")
+                                             top_p=0.95, n=self.n, stop="\n")
         else:
             response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=max_tokens,
-                                                temperature=1, stop="\n")
+                                                top_p=0.95, n=self.n, stop="\n")
+
         print("RESPONSE>>>>")
         print(response)
         return response
+
 
     def save(self, path: str=None) -> str:
         if path == None:
@@ -234,7 +296,7 @@ class GPT3Agent(Agent):
 class MetalearnedAgent(GPT3Agent):
 
     def parse(self, response: str, keys: List[str]) -> str:
-        response_str = response["choices"][0]["text"]
+        response_str = response["text"]
         response_str = response_str.replace("\n", " ")
         match = re.match(self.parse_regex, response_str)
         results = dict(zip(keys, len(keys) * [""]))
@@ -249,14 +311,20 @@ class MetalearnedAgent(GPT3Agent):
             results["action"] = ""
             return results
 
-    def predict_rollout(self, rollout: Rollout):
+    def predict_rollout(self, rollout: Rollout, value: bool=False):
         # whatshouldido format - temporary hack to get this to work. tbd: write this as a flat file and get Codex to
         # generate an inference loop.
         rollout_state_str = rollout["trajectory"].state_inference_str()
         rollout_action_str = rollout["trajectory"].action_inference_str()
         model_inference_str, _ = rollout["trajectory"].model_inference_str()
+        model_expectation_inference_str, _ = rollout["trajectory"].model_expectation_inference_str()
+        model_action_inference_str, _ = rollout["trajectory"].model_action_inference_str()
         imagination_action_inference_str = rollout["trajectory"].imagination_action_inference_str()
         imitation_inference_str, _ = rollout["trajectory"].imitation_inference_str()
+        expected_observation_update, _ = rollout["trajectory"].expected_observation_key("update")
+        expected_observation_summary, _ = rollout["trajectory"].expected_observation_key("summary")
+        expected_observation, _ = rollout["trajectory"].expected_observation()
+        obs_summary_t_to_expectation_action, _ = rollout["trajectory"].obs_summary_t_to_expectation_action_str()
         agent_type = "finetuned"
         if agent_type == "finetuned":
             prefix = self.prefix_ft
@@ -279,13 +347,40 @@ class MetalearnedAgent(GPT3Agent):
             formatted_query = "\n".join(prefix).format(
                 imagination_action_inference_str=imagination_action_inference_str, rollout_state_str=rollout_state_str,
                 rollout_action_str=rollout_action_str, model_inference_str=model_inference_str,
-                imitation_inference_str=imitation_inference_str)
+                imitation_inference_str=imitation_inference_str,
+                model_expectation_inference_str=model_expectation_inference_str,
+                model_action_inference_str=model_action_inference_str,
+                expected_observation_update=expected_observation_update,
+                expected_observation_summary=expected_observation_summary,
+                expected_observation=expected_observation,
+                obs_summary_t_to_expectation_action=obs_summary_t_to_expectation_action)
         response = self.predict(formatted_query)
-        parsed = self.parse(response, keys=self.keys)
+        if value:
+            choice, score, sorted_choices = self.value(formatted_query, response)
+            print([(c[0], c[1][0]) for c in sorted_choices])
+        else:
+            choice = response["choices"][0]
+        parsed = self.parse(choice, keys=self.keys)
         action = parsed["action"]
         action = action[:min(50, len(action))]
         del parsed["action"]
         return action, parsed, formatted_query
+
+    def value(self, prompt, response):
+        """Estimate the Q-value of the state."""
+        scores = []
+        for i in range(len(response["choices"])):
+            import time
+            time.sleep(0.3)
+            full_prompt = prompt + response["choices"][0]["text"] + "\n"
+            engine = "curie:ft-personal-2022-01-20-16-49-48"
+            score_response = openai.Completion.create(model=engine, prompt=full_prompt, max_tokens=self.length,
+                                                top_p=0.95, n=1, stop="\n", logprobs=5)
+            scores.append((score_response["choices"][0]["logprobs"]["top_logprobs"][0].get("good", -np.inf),
+                                                                                           score_response))
+        zipped = zip(response["choices"], scores)
+        sorted_scores = sorted(zipped, key= lambda x: x[1][0], reverse=True)
+        return sorted_scores[0][0], sorted_scores[0][1][0], sorted_scores
 
     def compress(self, rollouts: dict):
         # Learned policy for compression.
