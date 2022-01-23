@@ -106,7 +106,7 @@ class Trajectory(list):
                 completion_str = f" {state_others_pred}] action: [ {action} ]\n"
         return string_repr, completion_str
 
-    def obs_summary_t_to_expectation_action_str(self):
+    def obs_summary_t_to_expectation_action_str(self, fitness_str: str = "4"):
         """Expect the next state and act to explore accordingly."""
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
@@ -120,7 +120,8 @@ class Trajectory(list):
             state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
                 "next_obs"]))
             if i == len(self) - 1:
-                state_others_context = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                state_others_context = f"fitness: '{fitness_str}' " + self.strip_state(self.dict_to_str(
+                    state_others, causal_order=[
                     "summary"]))
             else:
                 state_others_context = ""  # self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))

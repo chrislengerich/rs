@@ -78,9 +78,6 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
         trajs = r.hindsight_trajectories(format)
         for t in trajs:
           if t[0][0] == '':
-            print("continuing")
-            print(t)
-            print("")
             continue
           if format == "model_inference_str":
             prompt, completion = t.model_inference_str()
@@ -95,7 +92,7 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
           elif format == "expected_observation_summary":
             prompt, completion = t.expected_observation_key("summary")
           elif format == "obs_summary_t_to_expectation_action":
-            prompt, completion = t.obs_summary_t_to_expectation_action_str()
+            prompt, completion = t.obs_summary_t_to_expectation_action_str(str(r.fitness()))
           elif format == "expected_observation":
             prompt, completion = t.expected_observation()
           else:
@@ -188,17 +185,17 @@ def write_reward_policy(rollouts_filepath='rollouts.pkl', finetune_filepath='rol
     sorted_rollouts = sorted(rollouts_by_fitness, key=lambda x: x['fitness'], reverse=True)
     print(sorted_rollouts[:5])
     print(sorted_rollouts[-5:])
-    top_rollouts = sorted_rollouts[:100]
+    top_rollouts = sorted_rollouts[:300]
     print("top rollouts")
     stats(top_rollouts)
-    bottom_rollouts = sorted_rollouts[-100:]
+    bottom_rollouts = sorted_rollouts[-300:]
     print("bottom rollouts")
     stats(bottom_rollouts)
 
     for j in top_rollouts:
       j_copy = copy.deepcopy(j)
       j_copy['prompt'] += j_copy['completion']
-      j_copy["completion"] = "good"
+      j_copy["completion"] = str(j_copy['fitness'])
       del j_copy['fitness']
       del j_copy['agent']
       f.write(json.dumps(j_copy))
@@ -207,7 +204,7 @@ def write_reward_policy(rollouts_filepath='rollouts.pkl', finetune_filepath='rol
     for j in bottom_rollouts:
       j_copy = copy.deepcopy(j)
       j_copy['prompt'] += j_copy['completion']
-      j_copy["completion"] = "bad"
+      j_copy["completion"] = str(j_copy['fitness'])
       del j_copy['fitness']
       del j_copy['agent']
       f.write(json.dumps(j_copy))

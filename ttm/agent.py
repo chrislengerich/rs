@@ -210,6 +210,9 @@ class GPT3Agent(Agent):
     # total_human: 153
     # total_agent: 752
 
+    engine = "curie:ft-personal-2022-01-20-21-48-26" # context: obs, summary predict: expected_obs, action
+    engine = "curie:ft-personal-2022-01-21-00-01-37" # context: obs, summary, fitness predict: expected_obs, action
+
 
     # goal.
     # machine-learned variants.
@@ -373,11 +376,15 @@ class MetalearnedAgent(GPT3Agent):
             import time
             time.sleep(0.3)
             full_prompt = prompt + response["choices"][0]["text"] + "\n"
-            engine = "curie:ft-personal-2022-01-20-16-49-48"
+            engine = "curie:ft-personal-2022-01-20-16-49-48" # 'good'
+            engine = "curie:ft-personal-2022-01-21-01-14-04" # numbers, 300 good, 300 bad examples
             score_response = openai.Completion.create(model=engine, prompt=full_prompt, max_tokens=self.length,
                                                 top_p=0.95, n=1, stop="\n", logprobs=5)
-            scores.append((score_response["choices"][0]["logprobs"]["top_logprobs"][0].get("good", -np.inf),
-                                                                                           score_response))
+            # print(score_response)
+            # previously: good
+            logprobs = score_response["choices"][0]["logprobs"]["top_logprobs"][0]
+            score = int(max(logprobs, key=logprobs.get))
+            scores.append((score,score_response))
         zipped = zip(response["choices"], scores)
         sorted_scores = sorted(zipped, key= lambda x: x[1][0], reverse=True)
         return sorted_scores[0][0], sorted_scores[0][1][0], sorted_scores
