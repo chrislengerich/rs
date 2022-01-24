@@ -91,7 +91,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
             #print(rollout)
             state = {"obs": obs}
-            trajectory.append([state, goal, "blank"])
+            trajectory.append([state, goal, "blank", copy.deepcopy(env)])
             if new_policy != "" and actions == 0:
                 metalearn_action = new_policy
             else:

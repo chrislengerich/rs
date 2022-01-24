@@ -24,6 +24,12 @@ class Trajectory(list):
     def actions(self): 
         return [i[2] for i in self]
 
+    def env_states(self):
+        return [i[3] for i in self]
+
+    def restore(self, offset: int):
+        return self[offset][3]
+
     def action_inference_str(self):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
