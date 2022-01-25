@@ -24,12 +24,6 @@ class Trajectory(list):
     def actions(self): 
         return [i[2] for i in self]
 
-    def env_states(self):
-        return [i[3] for i in self]
-
-    def restore(self, offset: int):
-        return self[offset][3]
-
     def action_inference_str(self):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
@@ -282,6 +276,18 @@ class Rollout(dict):
         state = trajectory.states()[-1]
         state = re.sub("[\n\t]", "", str(state)).split(".")[0]
         return state
+
+    def restore(self, env, offset: int):
+        # returns the environment and state context at that time.
+        env.reset()
+        for a in self["trajectory"].actions()[:offset]:
+            env.step(a)
+        new_traj = Trajectory()
+        new_traj.extend(self["trajectory"][:offset])
+        new_rollout = copy.deepcopy(self)
+        new_rollout["trajectory"] = new_traj
+        new_rollout["scores"] = new_rollout["scores"][:offset]
+        return env, new_rollout
 
     def fitness(self):
         return self["scores"][-1]

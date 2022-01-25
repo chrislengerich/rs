@@ -91,7 +91,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
             # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
             #print(rollout)
             state = {"obs": obs}
-            trajectory.append([state, goal, "blank", copy.deepcopy(env)])
+            trajectory.append([state, goal, "blank"])
             if new_policy != "" and actions == 0:
                 metalearn_action = new_policy
             else:
@@ -103,14 +103,6 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
 
             if done:
                 break
-
-            teacher_forcing = True
-            if teacher_forcing: # using teacher forcing to rewrite the action.
-                aux_agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/obs_summary_t_to_expectation_action/")
-                old_metalearn_action = metalearn_action
-                metalearn_action, dict_update, formatted_query = aux_agent.predict_rollout(rollout, value=True)
-                print(f"ACTION_UPDATE >>>> {old_metalearn_action} -> {metalearn_action}")
-                state.update(dict_update)
 
                 # rollout_copy = copy.deepcopy(rollout)
                 # rollout_copy["trajectory"] = rollout.hindsight_trajectory(rollout_copy["trajectory"])
@@ -128,27 +120,24 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
             # Write out data with next_turn's update.
 
             # At inference time, substitute the model expectations for the next turn's update.
-            matched = False
-            for p in known_policies:
-                if re.match(f".*{p}.*", metalearn_action):
-                    query_agent = MetalearnedAgent(metalearn_goal, path=f"ttm/data/{p}")
-                    trajectory[-1][-1] = p  # compressed version of action.
-                    what_can_i_do, response, formatted_query = query_agent.predict_rollout(rollout)
-                    obs += " " + what_can_i_do
-                    print(obs)
-                    assert not matched
-                    matched = True
-            if not matched:
-                command = metalearn_action
-                trajectory[-1][-1] = command
+            command = metalearn_action
+            trajectory[-1][-1] = command
+            if re.match(r"restore:(.*)", metalearn_action):
+                offset = int(re.match(r"restore:(.*)", metalearn_action).group(1))
+                rollouts.append(copy.deepcopy(rollout))
+                env, rollout = rollout.restore(env, offset)
+                trajectory = rollout["trajectory"]
+            else:
                 obs, score, done, infos = env.step(command)
-                #print(infos)
                 scores.append(score)
                 print(scores)
-                if isinstance(env, FrotzEnv):
-                    print(obs)
-                else:
-                    env.render()
+
+            print(rollouts)
+
+            if isinstance(env, FrotzEnv):
+                print(obs)
+            else:
+                env.render()
             actions += 1
             print(f"Learning: {rollout.learning()['joint']}")
             if rollout.learning()['joint'] < 0.85: # early exit from failing rollouts in the wrong part of the data
@@ -162,7 +151,7 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
     print(f"Train epochs: {train_epochs}")
     print(f"Agent fitness: {fitness}")
     print(f"Agent learning: {learning}")
-    if True: #policy != "" and (fitness > 0 or game == "zork1.z5"):
+    if False: #policy != "" and (fitness > 0 or game == "zork1.z5"):
         print("Saving agent trajectory")
         return list(agent.write_rollouts(rollouts, game, policy)) + [fitness, learning, actions]
     else:

@@ -488,6 +488,15 @@ class TransformerAgent(MetalearnedAgent):
         )
         trainer.train()
         trainer.save_model()
+
+# Teacher forcing:
+# teacher_forcing = False
+# if teacher_forcing:  # using teacher forcing to rewrite the action.
+#     aux_agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/obs_summary_t_to_expectation_action/")
+#     old_metalearn_action = metalearn_action
+#     metalearn_action, dict_update, formatted_query = aux_agent.predict_rollout(rollout, value=True)
+#     print(f"ACTION_UPDATE >>>> {old_metalearn_action} -> {metalearn_action}")
+#     state.update(dict_update)
     
 class HumanAgent(Agent):
     name = "human"
@@ -505,16 +514,33 @@ class HumanAgent(Agent):
             readline.set_startup_hook()
 
     # returns metalearn action, full action and query.
+    # deprecated.
+    # def predict_rollout(self, rollout: Rollout):
+    #     try:
+    #         update = input("update:")
+    #     except ValueError:
+    #         update = 0
+    #     prefill_summary = rollout["trajectory"].states()[-2]["summary"] if len(rollout["trajectory"].states()) >= 2 \
+    #         else ""
+    #     summary = self.rlinput("summary:", prefill_summary)
+    #     expectation = input("expectation:")
+    #     state = {"summary": summary, "expectation": expectation, "update": update}
+    #     action = input("action: ")
+    #     return action, state, ""
+
+    # returns metalearn action, full action and query.
+
+    # predict a rollout, accounting for hindsight learning.
     def predict_rollout(self, rollout: Rollout):
-        try:
-            update = input("update:")
-        except ValueError:
-            update = 0
-        prefill_summary = rollout["trajectory"].states()[-2]["summary"] if len(rollout["trajectory"].states()) >= 2 \
-            else ""
-        summary = self.rlinput("summary:", prefill_summary)
-        expectation = input("expectation:")
-        state = {"summary": summary, "expectation": expectation, "update": update}
+        hindsight_summary = input("hindsight summary: ")
+        if hindsight_summary != "":
+            length = input("window: ")
+            value = input("value: ") # 100.0.
+        else:
+            length = ""
+            value = ""
+        state = {"hindsight_summary": hindsight_summary, "hindsight_length": length, "value": value, "expectation":
+            "", "update": "", "summary": ""}
         action = input("action: ")
         return action, state, ""
 
