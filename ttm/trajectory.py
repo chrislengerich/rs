@@ -135,6 +135,33 @@ class Trajectory(list):
                 completion_str = f" {state_others_pred}] action: [ {action} ]\n"
         return string_repr, completion_str
 
+    def hindsight_expectation_str(self, value_str: str = "4"):
+        """Expect the next state and act to explore accordingly."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                "hindsight_expectation"]))
+            if i == len(self) - 1:
+                state_others_context = f"fitness: '{value_str}' "
+            else:
+                state_others_context = ""  # self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))
+            # state_others_pred = ""
+            state_prefix = f"step {i} "  # unused for now.
+            string_repr += f"state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others_context}] action: [ {action} ]\n"
+            else:
+                string_repr += f"{state_others_context}"
+                completion_str = f" {state_others_pred}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
     def expected_observation_key(self, key:str):
         """Expect the next state and act to explore accordingly."""
         goal = str(self.goals()[0])
@@ -284,7 +311,10 @@ class Rollout(dict):
             env.step(a)
         new_traj = Trajectory()
         new_traj.extend(self["trajectory"][:offset])
+        
+        # fork a new rollout from the current rollout, copying the context.
         new_rollout = copy.deepcopy(self)
+        new_rollout.timestamp = datetime.datetime.now()
         new_rollout["trajectory"] = new_traj
         new_rollout["scores"] = new_rollout["scores"][:offset]
         return env, new_rollout
@@ -305,6 +335,8 @@ class Rollout(dict):
             obs_diversity, "joint": np.mean([action_diversity, obs_diversity, (1- blank_ratio)])}
 
     def hindsight_trajectory(self, trajectory: Trajectory, unused_format: str):
+        trajectory.append(({'obs': 'end game'}, trajectory[-1][1], "sequence_end"))
+
         num_obs = 1
         for i in range(len(trajectory) - num_obs):
             # prior: obs
@@ -320,8 +352,24 @@ class Rollout(dict):
             if 'expectation' in trajectory[i + 1][0]:
                 composite_obs = " || ".join([trajectory[i + j][0]['expectation'] for j in range(1, num_obs + 1)])
                 trajectory[i][0]['next_expectation'] = composite_obs  # add a key for
-            # updates.
-        #trajectory[-1][0]['next_update'] = 'end'
+
+        # label with dynamic-range hindsight trajectories.
+        for i in range(len(trajectory)-1,0,-1):
+            if trajectory.states()[i].get('hindsight_summary', '') != '':
+
+                length = int(trajectory[i][0]['hindsight_length'])
+                for j in range(i-length, i):
+                    trajectory[j][0].setdefault(
+                        'hindsight_expectation', []).append(trajectory[i][0][
+                        'hindsight_summary'])
+                    trajectory[j][0].setdefault(
+                        'hindsight_value', []).append(float(trajectory[i][0][
+                                                                'value']))
+
+        for i in range(len(trajectory)):
+            if 'hindsight_value' in trajectory[i][0]:
+                trajectory[i][0]['hindsight_value'] = np.mean(trajectory[i][0]['hindsight_value'])
+
         new_trajectory = copy.deepcopy(trajectory)
 
         return new_trajectory[:-num_obs]

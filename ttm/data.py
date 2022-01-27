@@ -38,6 +38,21 @@ def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt
             f.write(line)
             f.write('\n')
 
+def format_hindsight_value(hindsight_value: float) -> str:
+  """Tokenize numerical hindsight value."""
+  if hindsight_value == -1:
+    return ""
+  if hindsight_value < 0.2:
+    return "low"
+  elif hindsight_value < 0.8:
+    return "middle"
+  else:
+    return "high"
+
+def data_filter(agent_name, game, r):
+  return ((agent_name == "human") and ((re.match(
+      ".*train.*", game))) and any(["hindsight_summary" in ri for ri in r["trajectory"].states()]))
+
 def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath='rollouts.txt',
                             format='model_inference_str'):
   rollouts_dict = read_rollouts(rollouts_filepath)
@@ -58,10 +73,20 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
           print(r.learning())
           print(r.agent['name'])
 
+        # check if we're using the new data format for hindsight trajectories.
+
+        # for i, ri in enumerate(r["trajectory"].actions()):
+        #   if re.match(".*restore.*", ri):
+        #     is_hindsight = any(["hindsight_summary" in ri for ri in r["trajectory"].states()])
+
         # or re.match(".*enter.*", game) or re.match(".*enchanter.*", game)
         # re.match(".*zork.*", game) or re.match(".*dragon.*", game) or
-        if not ((agent_name == "human" or r.fitness() >= 2) and ((re.match(
-            ".*train.*",game)))):
+        # or r.fitness() >= 2
+
+        # original variant - want to restore this.
+        # if not ((agent_name == "human") and ((re.match(
+        #     ".*train.*",game))) and is_hindsight):
+        if not data_filter(agent_name, game, r):
         # if (r.fitness() < 1 and not re.match(".*zork.*", game))  or re.match(".*964.*", game) or re.match(".*90["
         #                                                                                                   "0-3].*",\
         #     game) or (agent_name != "human" and agent_name != "" and not ((r.learning()['joint'] > 0.70) and
@@ -93,6 +118,10 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
             prompt, completion = t.expected_observation_key("summary")
           elif format == "obs_summary_t_to_expectation_action":
             prompt, completion = t.obs_summary_t_to_expectation_action_str(str(r.fitness()))
+          elif format == "hindsight_expectation_str":
+            hindsight_value = t.states()[-1].get("hindsight_value", -1)
+            hindsight_value = format_hindsight_value(hindsight_value)
+            prompt, completion = t.hindsight_expectation_str(hindsight_value)
           elif format == "expected_observation":
             prompt, completion = t.expected_observation()
           else:

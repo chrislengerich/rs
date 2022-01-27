@@ -9,6 +9,8 @@ import numpy as np
 import textworld.gym
 import time
 import pickle
+import pprint
+import inspect
 
 from jericho import FrotzEnv
 
@@ -58,7 +60,8 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
         level_2 = [1, 1, True, True, "valid"]
         level_3 = [1, 9, False, False, "train"]
         level_4 = [3, 6, True, True, "train"]
-        game = agent.build_cooking(*level_2)
+        game = agent.build_cooking(*level_4)
+        # TBD - one continuous playthrough for training collection (ie. 1 meta-epoch).
         #game = agent.build_game(7, 4, seed)
         env = setup_game(game)
         goal = get_goal(env)
@@ -127,12 +130,13 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 rollouts.append(copy.deepcopy(rollout))
                 env, rollout = rollout.restore(env, offset)
                 trajectory = rollout["trajectory"]
+                scores = rollout["scores"]
             else:
                 obs, score, done, infos = env.step(command)
                 scores.append(score)
                 print(scores)
 
-            print(rollouts)
+            pprint.pprint(rollouts)
 
             if isinstance(env, FrotzEnv):
                 print(obs)
@@ -151,7 +155,10 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
     print(f"Train epochs: {train_epochs}")
     print(f"Agent fitness: {fitness}")
     print(f"Agent learning: {learning}")
-    if False: #policy != "" and (fitness > 0 or game == "zork1.z5"):
+    if True: #policy != "" and (fitness > 0 or game == "zork1.z5"):
+        most_recent_game["trajectory"].append([{"obs": "data collection ended", "summary": "",
+                                                "expectation":"",
+                                                "update": "", "next_update": ""}, goal, f"data_collection_end: {inspect.getsource(data.data_filter)}"])
         print("Saving agent trajectory")
         return list(agent.write_rollouts(rollouts, game, policy)) + [fitness, learning, actions]
     else:

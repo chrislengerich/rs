@@ -213,6 +213,13 @@ class GPT3Agent(Agent):
     engine = "curie:ft-personal-2022-01-20-21-48-26" # context: obs, summary predict: expected_obs, action
     engine = "curie:ft-personal-2022-01-21-00-01-37" # context: obs, summary, fitness predict: expected_obs, action
 
+    # hindsight_expectation_str family of models.
+    engine = "curie:ft-personal-2022-01-26-20-48-52"  # 0.42:
+    # {'cooking': 79}
+    # total_rollouts: 6
+    # total_examples: 79
+    # total_human: 79
+    # total_agent: 0
 
     # goal.
     # machine-learned variants.
@@ -328,6 +335,7 @@ class MetalearnedAgent(GPT3Agent):
         expected_observation_summary, _ = rollout["trajectory"].expected_observation_key("summary")
         expected_observation, _ = rollout["trajectory"].expected_observation()
         obs_summary_t_to_expectation_action, _ = rollout["trajectory"].obs_summary_t_to_expectation_action_str()
+        hindsight_expectation_str, _ = rollout["trajectory"].hindsight_expectation_str("high")
         agent_type = "finetuned"
         if agent_type == "finetuned":
             prefix = self.prefix_ft
@@ -356,7 +364,8 @@ class MetalearnedAgent(GPT3Agent):
                 expected_observation_update=expected_observation_update,
                 expected_observation_summary=expected_observation_summary,
                 expected_observation=expected_observation,
-                obs_summary_t_to_expectation_action=obs_summary_t_to_expectation_action)
+                obs_summary_t_to_expectation_action=obs_summary_t_to_expectation_action,
+                hindsight_expectation_str=hindsight_expectation_str)
         response = self.predict(formatted_query)
         if value:
             choice, score, sorted_choices = self.value(formatted_query, response)
