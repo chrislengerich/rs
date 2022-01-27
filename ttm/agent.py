@@ -537,8 +537,6 @@ class HumanAgent(Agent):
     #     action = input("action: ")
     #     return action, state, ""
 
-    # returns metalearn action, full action and query.
-
     # predict a rollout, accounting for hindsight learning.
     def predict_rollout(self, rollout: Rollout):
         hindsight_summary = input("hindsight summary: ")
@@ -552,6 +550,32 @@ class HumanAgent(Agent):
             "", "update": "", "summary": ""}
         action = input("action: ")
         return action, state, ""
+
+class SystemAgent(Agent):
+    """Automate some tasks for the user."""
+    name = "system"
+    engine = ""
+    args = None
+
+    def predict(self, prompt: str, rollout: Rollout):
+        print(prompt)
+        return input("action> "), "unused_prediction"
+
+    def predict_rollout(self, rollout: Rollout):
+        # there is a start placeholder observation + a single token.
+        if len(rollout["trajectory"]) == 2:
+            return self.load_env(self.args.game, self.args.split), {"summary": "", "expectation": "", "update": "",
+            "next_update": ""}, ""
+        elif len(rollout["trajectory"]) == 3:
+            return self.load_agent(self.args.meta_policy), {"summary": "", "expectation": "", "update": "",
+            "next_update": ""}, ""
+
+    def load_agent(self, agent):
+        return f"agent: '{agent}'"
+
+    # returns metalearn action, full action and query.
+    def load_env(self, game: str, split: str):
+      return f"load: ['game': '{game}', 'split': '{split}']"
 
         
 

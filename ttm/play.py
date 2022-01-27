@@ -14,7 +14,7 @@ import inspect
 
 from jericho import FrotzEnv
 
-from agent import TransformerAgent, HumanAgent, MetalearnedAgent
+from agent import TransformerAgent, HumanAgent, MetalearnedAgent, SystemAgent
 from trajectory import Trajectory, Rollout, Goal
 
 import pdb, sys
@@ -50,58 +50,66 @@ def metalearn(agent, max_train_epochs=1):
         agent.train("ttm/gpt2-metalearn", rollout_path, rollout_path)
         train_epochs += 1
 
+def build_game(game: str, split: str):
+    """Split is one of 'train', 'valid', 'test'.
+
+        # Jericho games have no split associated with them.
+            #game = "enchanter.z3"
+            #game = "enter.z5"
+            game = "gold.z5"
+            #game = "dragon.z5"
+            #game = "zork1.z5"
+    """
+    if re.match("cooking_level_1", game):
+        level = [1, 1,True,False,split]
+    elif re.match("cooking_level_2", game):
+        level = [1, 1, True, True, split]
+    elif re.match("cooking_level_3", game):
+        level = [1, 9, False, False, split]
+    elif re.match("cooking_level_4", game):
+        level = [3, 6, True, True, split]
+    else:
+        env = FrotzEnv(f"jericho_games/z-machine-games-master/jericho-game-suite/{game}")
+        goal = "explore, get points, don't die"
+
+    if re.match(r"cooking.*", game):
+        game = agent.build_cooking(*level)
+        env = setup_game(game)
+        goal = get_goal(env)
+
+    obs, infos = env.reset()  # Start a new episode of the game.
+    print(obs)
+    obs = "\n".join(obs.split("\n")[-5:])
+
+    return env, goal, obs, game
+
 def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str="",
                  seed: int=994, max_actions=3):
     """Builds a game and run rollouts in that game"""
-    if True: # TextWorld game
-        #game = agent.build_treasure_hunter(1)
-        # level 1 for cooking:
-        level_1 = [1, 1,True,False,"valid"]
-        level_2 = [1, 1, True, True, "valid"]
-        level_3 = [1, 9, False, False, "train"]
-        level_4 = [3, 6, True, True, "train"]
-        game = agent.build_cooking(*level_4)
-        # TBD - one continuous playthrough for training collection (ie. 1 meta-epoch).
-        #game = agent.build_game(7, 4, seed)
-        env = setup_game(game)
-        goal = get_goal(env)
-    else:
-        #game = "enchanter.z3"
-        #game = "enter.z5"
-        game = "gold.z5"
-        #game = "dragon.z5"
-        #game = "zork1.z5"
-        env = FrotzEnv(f"jericho_games/z-machine-games-master/jericho-game-suite/{game}")
-        goal = "explore, get points, don't die"
-    print(f"goal is '{goal}'")
+
     max_actions = max_actions  # 3
     max_rollouts = 1  # 10
     rollouts = []
-    known_policies = sorted(known_policies, key=len, reverse=True)
+    #known_policies = sorted(known_policies, key=len, reverse=True)
     while len(rollouts) < max_rollouts:
-        obs, infos = env.reset()  # Start new episode.
-        # env.render()
-        print(obs)
-        obs = "\n".join(obs.split("\n")[-5:])
-        score, actions, done = 0, 0, False
         trajectory = Trajectory()
-        goal = Goal(goal)
+        goal = Goal("get a high generalization score")
+        score, actions, done = 0, 0, False
         trajectory.append([{"obs": "", "summary": "", "expectation": "", "update": "", "next_update": ""}, goal, \
                                                                                                             "start"])
+        obs = "start"
         scores = []
-        rollout = Rollout(trajectory, goal, scores, agent={"name": agent.name, "engine": agent.engine})
-        while (actions < max_actions): # or (agent.name == 'human' and game != "zork1.z5")):
-            # metalearn_rollout = Rollout(agent.learning_trajectory, metalearn_goal, [])
-            #print(rollout)
+        rollout = Rollout(trajectory, goal, scores, agent={"name": "not set" , "engine": "not set"})
+        while (actions < max_actions):
             state = {"obs": obs}
             trajectory.append([state, goal, "blank"])
-            if new_policy != "" and actions == 0:
-                metalearn_action = new_policy
-            else:
-                metalearn_action, dict_update, formatted_query = agent.predict_rollout(rollout)
-                # carry through the summary.
-                if 'summary' in dict_update and dict_update['summary'] == '' and len(trajectory) > 1:
-                    dict_update['summary'] = trajectory[-2][0]['summary']
+            action, dict_update, formatted_query = agent.predict_rollout(rollout)
+            # carry through the summary.
+            import pdb
+            pdb.set_trace()
+
+            if 'summary' in dict_update and dict_update['summary'] == '' and len(trajectory) > 3:
+                dict_update['summary'] = trajectory[-2][0]['summary']
             state.update(dict_update)
 
             if done:
@@ -115,24 +123,31 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 # print(f"ACTION_UPDATE >>>> {old_metalearn_action} -> {metalearn_action}")
                 # rollout["trajectory"][-1][0]["action"] = metalearn_action
 
-            # given updates, summaries, expectations and actions, predict the current update + summary + expectations (
-            # training the WM) -> this is already done by the default model, no need to retrain.
-
-            # given updates, summaries, expectations and actions + current turn's update + summary + expectations,
-            # predict the next turn's update + action -> this needs to be trained.
-            # Write out data with next_turn's update.
-
             # At inference time, substitute the model expectations for the next turn's update.
-            command = metalearn_action
-            trajectory[-1][-1] = command
-            if re.match(r"restore:(.*)", metalearn_action):
-                offset = int(re.match(r"restore:(.*)", metalearn_action).group(1))
+            trajectory[-1][-1] = action
+            if re.match(r"restore:(.*)", action):
+                offset = int(re.match(r"restore:(.*)", action).group(1))
                 rollouts.append(copy.deepcopy(rollout))
                 env, rollout = rollout.restore(env, offset)
                 trajectory = rollout["trajectory"]
                 scores = rollout["scores"]
+            elif re.match(r"load:.*", action):
+                match = re.match(r"load:.*\['game':.*'(.*)',.*'split':.*'(.*)'\]",
+                                 action)
+                game, split = match.groups()
+                env, goal, obs, game = build_game(game, split)
+            elif re.match(r"agent:.*", action):
+                match = re.match("agent:.*'(.*)'", action)
+                agent_name = match.groups()[0]
+                # replace the current agent with the executing agent.
+                agent_goal = "score = 10000"
+                if agent_name == "human":
+                    agent = HumanAgent(agent_goal, device=0)
+                else:
+                    agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{agent_name}/")
+                rollout.agent = {"name": agent.name, "engine": agent.engine}
             else:
-                obs, score, done, infos = env.step(command)
+                obs, score, done, infos = env.step(action)
                 scores.append(score)
                 print(scores)
 
@@ -167,24 +182,21 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
 parser = argparse.ArgumentParser()
 parser.add_argument("--policy", default="", help="Policy used as a suffix for the filename")
 parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
+parser.add_argument("--game", default="cooking_level_2", help="String for game name")
+parser.add_argument("--split", default="train", help="one of train, valid or test")
 parser.add_argument("--seed", default=1000, help="Random seed")
 parser.add_argument("--max_actions", type=int, default=3, help="Max actions")
 parser.add_argument("--train_epochs", type=int, default=1, help="Max train epochs")
 args = parser.parse_args()
 rollout_path = f"ttm/data/{args.policy}/grounding_data.pkl"
 
-agent_goal = "score = 10000"
-metalearn_prefix = "metalearn: "
-metalearn_goal = metalearn_prefix + agent_goal
-
-if args.meta_policy == "human":
-    agent = HumanAgent(agent_goal, device=0)
-else:
-    agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{args.meta_policy}/")
-
 max_train_epochs = args.train_epochs
 train_epochs = 0
 fitness = 0
+
+agent_goal = "score = 10000"
+agent = SystemAgent(agent_goal, device=0)
+agent.args = args
 
 # Meta-learning agent.
 # Currently uses a fixed policy to achieve its objective.
