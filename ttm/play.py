@@ -3,6 +3,7 @@ import copy
 import random
 import re
 import subprocess
+from shlex import shlex
 
 import gym
 import numpy as np
@@ -20,6 +21,7 @@ from trajectory import Trajectory, Rollout, Goal
 import pdb, sys
 
 from ttm import data
+from ttm.data import write_rollouts_finetune
 
 
 def get_goal(env):
@@ -105,8 +107,6 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
             trajectory.append([state, goal, "blank"])
             action, dict_update, formatted_query = agent.predict_rollout(rollout)
             # carry through the summary.
-            import pdb
-            pdb.set_trace()
 
             if 'summary' in dict_update and dict_update['summary'] == '' and len(trajectory) > 3:
                 dict_update['summary'] = trajectory[-2][0]['summary']
@@ -146,6 +146,17 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 else:
                     agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{agent_name}/")
                 rollout.agent = {"name": agent.name, "engine": agent.engine}
+            elif re.match(r"sample_data: *", action):
+                arg_string = re.match(r"write_finetune: (.*)", action).groups[0].strip()
+                args = parser.parse_args(shlex.split(arg_string))
+                write_rollouts_finetune(args.pickle_path, args.finetune_path, args.format)
+            elif re.match(r"finetune: .*"):
+                argstring = SystemAgent().train_command(policy)
+                output = subprocess.check_output(argstring, shell=True)
+                import pdb
+                pdb.set_trace()
+                model_name = re.match(SystemAgent.model_name_regex, output).groups()[0]
+                obs = f"model name: {model_name}"
             else:
                 obs, score, done, infos = env.step(action)
                 scores.append(score)

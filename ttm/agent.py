@@ -573,6 +573,18 @@ class SystemAgent(Agent):
     def load_agent(self, agent):
         return f"agent: '{agent}'"
 
+    def write_finetune(self, agent):
+        """Returns the arg string for the data filtering pass."""
+        return f"--pickle_path=ttm/data/{agent}/grounding_data.pkl --finetune_path=ttm/data/" \
+               f"{agent}/grounding_data.jsonl --format=hindsight_expectation_str"
+
+    def train_command(self, agent):
+        """Returns the command-line string for the fine-tuning pass"""
+        return f"openai api fine_tunes.create -t \"ttm/data/{agent}/grounding_data.jsonl\" \
+               --no_packing --batch_size 1"
+
+    model_name_regex = ".*openai api completions.create -m (.*) -p.*"
+
     # returns metalearn action, full action and query.
     def load_env(self, game: str, split: str):
       return f"load: ['game': '{game}', 'split': '{split}']"
