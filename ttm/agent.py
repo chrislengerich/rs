@@ -100,6 +100,26 @@ class Agent:
             ["tw-make", "tw-treasure_hunter", "--level", str(level), "--output", f"tw_games/{name}", "--force"])
         return name
 
+    def write_agent(self, policy: str, engine_name: str, training_data_path: str):
+        pickle_path = f"ttm/data/{policy}/agent_registry.pkl"
+        if os.path.exists(pickle_path):
+            with open(pickle_path, 'rb') as f:
+                agents = pickle.load(f)
+        else:
+            agents = {}
+        training_data = open(training_data_path, 'r').readlines()
+        import pdb
+        pdb.set_trace()
+        agents[engine_name] = training_data
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(agents, f)
+
+    def update_engine(self, new_engine: str):
+        file_path = f"ttm/data/{self.name}/engine"
+        with open(file_path, "w") as f:
+            f.write(new_engine)
+        self.engine = new_engine
+
     def write_rollouts(self, rollouts: List[Rollout], game: str, policy: str, args):
         # write the rollouts data out to pickled versions and flat files for training.
         pickle_path = f"ttm/data/{policy}/grounding_data.pkl"

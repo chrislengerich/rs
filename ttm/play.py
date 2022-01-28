@@ -232,6 +232,8 @@ def run_rollouts(agent: Agent, policy: str, args):
                 output = subprocess.check_output(argstring)
                 model_name = re.match(SystemAgent.model_name_regex, str(output)).groups()[0]
                 obs = f"model_name: {model_name}"
+                agent.update_engine(model_name)
+                agent.write_agent(policy, model_name, "ttm/data/{agent}/grounding_data.jsonl")
             elif re.match(r"fitness:.*", action):
                 fitness_data = Batch.fitness(rollouts)
                 print(f"fitness = {fitness_data['fitness']}")
