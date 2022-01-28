@@ -100,36 +100,37 @@ class Agent:
             ["tw-make", "tw-treasure_hunter", "--level", str(level), "--output", f"tw_games/{name}", "--force"])
         return name
 
-    def write_rollouts(self, rollouts: List[Rollout], game: str, policy: str, format: str="list", batch=None):
+    def write_rollouts(self, rollouts: List[Rollout], game: str, policy: str, args):
         # write the rollouts data out to pickled versions and flat files for training.
         pickle_path = f"ttm/data/{policy}/grounding_data.pkl"
         txt_path = "unused"
         #txt_path = f"ttm/data/{policy}/grounding_data"
 
-        if format == "list":
-            if os.path.exists(pickle_path):
-                with open(pickle_path, 'rb') as f:
-                    old_rollouts = pickle.load(f)
-            else:
-                old_rollouts = {}
-            old_rollouts.setdefault(game, []).extend(rollouts)
-            with open(pickle_path, "wb") as f:
-                pickle.dump(old_rollouts, f)
-        elif format == "batch":
-            key = f"run_id: {batch.run_id}, epoch_index: {batch.epoch_index()}, game: {batch.args.game}"
-            if os.path.exists(pickle_path):
-                with open(pickle_path, 'rb') as f:
-                    old_rollouts = pickle.load(f)
-            else:
-                old_rollouts = {}
-            if key in old_rollouts:
-                assert old_rollouts[key].run_id() == batch.run_id()
-                assert old_rollouts[key].epoch_index() == batch.epoch_index()
-                assert old_rollouts[key].rollouts.extend(rollouts)
-            else:
-                old_rollouts[key] = batch
-            with open(pickle_path, "wb") as f:
-                pickle.dump(old_rollouts, f)
+        # if format == "list":
+        if os.path.exists(pickle_path):
+            with open(pickle_path, 'rb') as f:
+                old_rollouts = pickle.load(f)
+        else:
+            old_rollouts = {}
+        key = f"{args} game='{game}'"
+        old_rollouts.setdefault(key, []).extend(rollouts)
+        with open(pickle_path, "wb") as f:
+            pickle.dump(old_rollouts, f)
+
+        # elif format == "batch":
+            # if os.path.exists(pickle_path):
+            #     with open(pickle_path, 'rb') as f:
+            #         old_rollouts = pickle.load(f)
+            # else:
+            #     old_rollouts = {}
+            # if key in old_rollouts:
+            #     assert old_rollouts[key].run_id() == batch.run_id()
+            #     assert old_rollouts[key].epoch_index() == batch.epoch_index()
+            #     assert old_rollouts[key].rollouts.extend(rollouts)
+            # else:
+            #     old_rollouts[key] = batch
+            # with open(pickle_path, "wb") as f:
+            #     pickle.dump(old_rollouts, f)
         return txt_path, pickle_path
 
     def get_metalearning_action(self, agent, obs, rollout):
@@ -351,7 +352,7 @@ class MetalearnedAgent(GPT3Agent):
         expected_observation_summary, _ = rollout["trajectory"].expected_observation_key("summary")
         expected_observation, _ = rollout["trajectory"].expected_observation()
         obs_summary_t_to_expectation_action, _ = rollout["trajectory"].obs_summary_t_to_expectation_action_str()
-        hindsight_expectation_str, _ = rollout["trajectory"].hindsight_expectation_str("high")
+        hindsight_expectation_str, _ = rollout["trajectory"].hindsight_expectation_str("high", "high")
         agent_type = "finetuned"
         if agent_type == "finetuned":
             prefix = self.prefix_ft
@@ -580,7 +581,7 @@ class SystemAgent(Agent):
     def predict_rollout(self, rollout: Rollout):
         # there is a start placeholder observation + a single token.
         if len(rollout["trajectory"]) == 2:
-            return self.load_env(self.args.game, self.args.split), {"summary": "", "expectation": "", "update": "",
+            return self.load_env(self.args.env, self.args.split), {"summary": "", "expectation": "", "update": "",
             "next_update": ""}, ""
         elif len(rollout["trajectory"]) == 3:
             return self.load_agent(self.args.meta_policy), {"summary": "", "expectation": "", "update": "",

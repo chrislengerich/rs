@@ -88,16 +88,16 @@ def build_game(game: str, split: str):
 
 
 
-def run_rollouts(agent: Agent, policy: str, batch: Batch):
+def run_rollouts(agent: Agent, policy: str, args):
     """Given a budget of |max_rollouts| and |max_actions| (cumulative total over all rollouts), allow an agent (starting,
     but not necessarily ending, as |agent|) to take actions to sample data, resample data, hindsight label
     data and train on the hindsight labeled data). This is analogous to RL training, but with a stronger emphasis on
     forward prediction and intermittent, rapid retraining on hindsight labeled data for intrinsically motivated
     hypothesis testing and generation.
     """
-    max_actions = batch.args.max_actions
-    max_rollouts = batch.args.max_rollouts
-    rollouts = batch.rollouts
+    max_actions = args.max_actions
+    max_rollouts = args.max_rollouts
+    rollouts = []
 
     while len(rollouts) < max_rollouts:
         trajectory = Trajectory()
@@ -107,7 +107,7 @@ def run_rollouts(agent: Agent, policy: str, batch: Batch):
                                                                                                             "start"])
         obs = "start"
         scores = []
-        rollout = Rollout(trajectory, goal, scores, agent={"name": "not set" , "engine": "not set"})
+        rollout = Rollout(trajectory, goal, scores, agent={"name": "not set" , "engine": "not set"}, args=args)
         while (actions < max_actions):
             state = {"obs": obs}
             trajectory.append([state, goal, "blank"])
@@ -217,9 +217,9 @@ def run_rollouts(agent: Agent, policy: str, batch: Batch):
                     agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{agent_name}/")
                 rollout.agent = {"name": agent.name, "engine": agent.engine}
             elif re.match(r"sample_data: *", action):
-                arg_string = re.match(r"write_finetune: (.*)", action).groups[0].strip()
-                args = parser.parse_args(shlex.split(arg_string))
-                write_rollouts_finetune(args.pickle_path, args.finetune_path, args.format)
+                sample_arg_string = re.match(r"write_finetune: (.*)", action).groups[0].strip()
+                sample_args = parser.parse_args(shlex.split(sample_arg_string))
+                write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format)
             elif re.match(r"finetune:.*", action):
                 argstring = SystemAgent().train_command(policy)
                 import pdb
@@ -228,7 +228,7 @@ def run_rollouts(agent: Agent, policy: str, batch: Batch):
                 model_name = re.match(SystemAgent.model_name_regex, output).groups()[0]
                 obs = f"model_name: {model_name}"
             elif re.match(r"fitness:.*", action):
-                fitness_data = batch.fitness()
+                fitness_data = Batch.fitness(rollouts)
                 print(f"fitness = {fitness_data['fitness']}")
                 print(f"mean fitness = {fitness_data['mean_fitness']}")
                 print(f"std dev fitness = {fitness_data['std_fitness']}")
@@ -255,15 +255,16 @@ def run_rollouts(agent: Agent, policy: str, batch: Batch):
         rollouts.append(rollout)
         print(f"Agent rollout fitness: {rollout.fitness()}")
         print(f"Agent rollout learning: {rollout.learning()}")
-        print(f"Batch fitness: {batch.fitness()}")
+        print(f"Batch fitness: {Batch.fitness(rollouts)}")
         print("Saving agent trajectory")
-        return agent.write_rollouts(rollouts, game, policy)
+        txt_path, pickle_path = agent.write_rollouts(rollouts, game, policy, args)
+    return txt_path, pickle_path
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--policy", default="", help="Policy used as a suffix for the filename")
 parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
-parser.add_argument("--game", default="cooking_level_2", help="String for game name")
+parser.add_argument("--env", default="cooking_level_2", help="String for high-level environment name")
 parser.add_argument("--split", default="train", help="one of train, valid or test")
 parser.add_argument("--run_id", default=0, help="id for training runs")
 parser.add_argument("--epoch_index", default=0, help="id for training runs")
@@ -280,6 +281,5 @@ agent.args = args
 # epochs.
 train_epochs = 0
 while train_epochs < args.max_train_epochs:
-    batch = Batch([], args)
-    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, batch)
+    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, args)
     train_epochs += 1

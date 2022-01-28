@@ -135,7 +135,7 @@ class Trajectory(list):
                 completion_str = f" {state_others_pred}] action: [ {action} ]\n"
         return string_repr, completion_str
 
-    def hindsight_expectation_str(self, value_str: str = "4"):
+    def hindsight_expectation_str(self, value_str: str = "4", batch_fitness_str=""):
         """Expect the next state and act to explore accordingly."""
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
@@ -149,7 +149,7 @@ class Trajectory(list):
             state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
                 "hindsight_expectation"]))
             if i == len(self) - 1:
-                state_others_context = f"fitness: '{value_str}' "
+                state_others_context = f"fitness: '{value_str}' batch_fitness: '{batch_fitness_str}"
             else:
                 state_others_context = ""  # self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))
             # state_others_pred = ""
@@ -294,9 +294,10 @@ class Rollout(dict):
     agent = {}
     timestamp = None
     
-    def __init__(self, trajectory: Trajectory, goal: Goal, scores: List[int], agent:dict = {}):
+    def __init__(self, trajectory: Trajectory, goal: Goal, scores: List[int], agent:dict = {}, args=None):
         self.agent = agent
         self.timestamp = datetime.datetime.now()
+        self.args = args # context that was passed in to create the rollout
         return self.update({"trajectory": trajectory, "goal": goal, "scores": scores})
     
     def hindsight_goal(self, trajectory: Trajectory):
@@ -385,25 +386,20 @@ class Rollout(dict):
                 trajectories.append(new_traj)
         return trajectories
 
-class Batch():
-    rollouts: List[Rollout] = []
-    args = None  # args used to initialize the rollout
-
-    def __init__(self, rollouts, args):
-        self.rollouts = rollouts
-        self.args = args
-
     def run_id(self):
         return self.args.run_id
 
     def epoch_index(self):
         return self.args.epoch_index
 
-    def fitness(self):
+class Batch:
+
+    @classmethod
+    def fitness(self, rollouts):
         """Calculate fitness over the batch of rollouts."""
-        fitness = [r.fitness() for r in self.rollouts]
-        learning = [r.learning()["joint"] for r in self.rollouts]
-        length = [len(r["trajectory"]) for r in self.rollouts]
+        fitness = [r.fitness() for r in rollouts]
+        learning = [r.learning()["joint"] for r in rollouts]
+        length = [len(r["trajectory"]) for r in rollouts]
         return {"mean_fitness": np.mean(fitness), "std_fitness": np.std(fitness), "fitness": fitness,
                 "mean_learning": np.mean(learning), "std_learning": np.std(learning), "learning": learning,
                 "length": length}
