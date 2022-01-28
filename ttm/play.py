@@ -227,13 +227,22 @@ def run_rollouts(agent: Agent, policy: str, args):
                 sample_arg_string = re.match(r"write_finetune: (.*)", action).groups[0].strip()
                 sample_args = parser.parse_args(shsplit(sample_arg_string))
                 write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format, args)
+                obs = f"sampled:"
             elif re.match(r"finetune:.*", action):
-                argstring = shsplit(SystemAgent("").train_command(policy))
-                output = subprocess.check_output(argstring)
-                model_name = re.match(SystemAgent.model_name_regex, str(output)).groups()[0]
-                obs = f"model_name: {model_name}"
+                if rollout.agent["name"] != "human":
+                    argstring = shsplit(SystemAgent("").train_command(policy))
+                    output = subprocess.check_output(argstring)
+                    model_name = re.match(SystemAgent.model_name_regex, str(output)).groups()[0]
+                    obs = f"finetuned: {model_name}"
+                    agent.update_engine(model_name)
+                    agent.write_agent(policy, model_name, "ttm/data/{agent}/grounding_data.jsonl")
+            elif re.match(r"register:.*", action):
+                # used for testing only
+                model_name = re.match("register: (.*)", action).groups()[0]
+                # assumes the most recent grounding data file is the output file.
+                agent.write_agent(policy, model_name, f"ttm/data/{policy}/grounding_data.jsonl")
                 agent.update_engine(model_name)
-                agent.write_agent(policy, model_name, "ttm/data/{agent}/grounding_data.jsonl")
+                obs = f"registered: {model_name}"
             elif re.match(r"fitness:.*", action):
                 fitness_data = Batch.fitness(rollouts)
                 print(f"fitness = {fitness_data['fitness']}")

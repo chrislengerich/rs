@@ -108,16 +108,17 @@ class Agent:
         else:
             agents = {}
         training_data = open(training_data_path, 'r').readlines()
-        import pdb
-        pdb.set_trace()
         agents[engine_name] = training_data
         with open(pickle_path, 'wb') as f:
             pickle.dump(agents, f)
 
     def update_engine(self, new_engine: str):
         file_path = f"ttm/data/{self.name}/engine"
-        with open(file_path, "w") as f:
-            f.write(new_engine)
+        if os.path.exists(file_path):
+            with open(file_path, "w") as f:
+                f.write(new_engine)
+        else:
+            print(f"No engine file found at {file_path}")
         self.engine = new_engine
 
     def write_rollouts(self, rollouts: List[Rollout], game: str, policy: str, args):
@@ -603,6 +604,8 @@ class SystemAgent(Agent):
         # if len(rollout["trajectory"]) == 2:
         #     return "finetune:", {"summary": "", "expectation": "", "update": "",
         #     "next_update": ""}, ""
+        if len(rollout["trajectory"]) == 2:
+            return "register: test", {"summary": "", "expectation": "", "update": "", "next_update": ""}, ""
         if len(rollout["trajectory"]) == 2:
             return self.load_env(self.args.env, self.args.split), {"summary": "", "expectation": "", "update": "",
             "next_update": ""}, ""

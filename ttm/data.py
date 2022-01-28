@@ -68,6 +68,35 @@ def data_filter(agent_name, game, r):
   return ((agent_name == "human") and ((re.match(
       ".*train.*", game))) and any(["hindsight_summary" in ri for ri in r["trajectory"].states()]))
 
+def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
+  partitions = ["teacher", "student_train", "student_test"]
+  rollouts = read_rollouts(rollouts_filepath)
+
+  # filter out only the rollouts where the run_id matches.
+  rollouts_list = []
+  for key, val in rollouts.items():
+    if re.match(f".*run_id={run_id}.*", key):
+      rollouts_list.extend(val)
+
+  fitnesses = []
+  if epoch is None:
+    epochs = range(0, max([r.epoch for r in rollouts if r.args.run_id == run_id])+1)
+  else:
+    epochs = [epoch]
+
+  for e in epochs:
+    epoch_fitness = {}
+    for p in partitions:
+      selected_rollouts = []
+      for r in rollouts_list:
+          if r.args.run_id == run_id and r.args.epoch == e and r.args.partition == p:
+            selected_rollouts.append(r)
+          fitness = Batch.fitness(selected_rollouts)
+          epoch_fitness[p] = fitness
+    epoch_fitness["epoch"] = e
+    fitnesses.append(epoch_fitness)
+  return fitnesses
+
 def partition_filter(current_args, rollout_args):
   """Return True if the rollout is valid training data."""
   if not current_args: # used for off-policy partitioning.
@@ -115,7 +144,8 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
         batches.setdefault(key, []).append(r)
 
       for key, selected_rollouts in batches.items():
-        if (str(r.current_args.epoch) + " " + r.current_args.partition) == key and not current_batch_fitness:
+        if (str(current_args.epoch) + " " + current_args.partition) == key and not \
+            current_batch_fitness:
           batch_fitness = ""
         else:
           batch_fitness = Batch.fitness(selected_rollouts)['mean_fitness']

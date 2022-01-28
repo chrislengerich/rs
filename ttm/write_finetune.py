@@ -8,4 +8,4 @@ if __name__ == "__main__":
   parser.add_argument("--format", type=str, default="model_inference_str", help="Format of text file")
   parser.add_argument("--finetune_path", type=str, default=None, help="Path to file for fine-tuning data")
   args = parser.parse_args()
-  print(write_rollouts_finetune(args.pickle_path, args.finetune_path, args.format))
+  print(write_rollouts_finetune(args.pickle_path, args.finetune_path, args.format, current_batch_fitness=False))
