@@ -5,6 +5,9 @@ import json
 import re
 from collections import Counter
 
+from ttm.trajectory import Batch
+from typing import List
+
 
 def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt', format='model_inference_str'):
     """
@@ -12,6 +15,7 @@ def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt
     """
     rollouts_dict = read_rollouts(rollouts_filepath)
     print(f"format: {format}")
+    raise Exception("Deprecated")
 
     with open(filename, 'w') as f:
       # temporary hack to evaluate learning to predict-as-a-service.
@@ -63,7 +67,16 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
     human_examples = 0
     agent_examples = 0
     rollouts_per_game = {}
-    for game, rollouts in rollouts_dict.items():
+    for game, data in rollouts_dict.items():
+      if isinstance(data, Batch):
+        rollouts = data.rollouts
+        batch_fitness = data.fitness()
+      elif isinstance(data, List): # list format
+        rollouts = data
+        batch_fitness = ""
+      else:
+        raise Exception("Unknown format")
+
       print("")
       print(f"{game} - {len(rollouts)} - {len(rollouts[0]['trajectory'])}")
       for r in rollouts:

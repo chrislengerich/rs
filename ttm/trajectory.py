@@ -311,7 +311,7 @@ class Rollout(dict):
             env.step(a)
         new_traj = Trajectory()
         new_traj.extend(self["trajectory"][:offset])
-        
+
         # fork a new rollout from the current rollout, copying the context.
         new_rollout = copy.deepcopy(self)
         new_rollout.timestamp = datetime.datetime.now()
@@ -384,5 +384,28 @@ class Rollout(dict):
                 new_traj = Trajectory(copy.deepcopy(self["trajectory"][:i]))
                 trajectories.append(new_traj)
         return trajectories
+
+class Batch():
+    rollouts: List[Rollout] = []
+    args = None  # args used to initialize the rollout
+
+    def __init__(self, rollouts, args):
+        self.rollouts = rollouts
+        self.args = args
+
+    def run_id(self):
+        return self.args.run_id
+
+    def epoch_index(self):
+        return self.args.epoch_index
+
+    def fitness(self):
+        """Calculate fitness over the batch of rollouts."""
+        fitness = [r.fitness() for r in self.rollouts]
+        learning = [r.learning()["joint"] for r in self.rollouts]
+        length = [len(r["trajectory"]) for r in self.rollouts]
+        return {"mean_fitness": np.mean(fitness), "std_fitness": np.std(fitness), "fitness": fitness,
+                "mean_learning": np.mean(learning), "std_learning": np.std(learning), "learning": learning,
+                "length": length}
     
     

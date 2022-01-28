@@ -15,8 +15,9 @@ import inspect
 
 from jericho import FrotzEnv
 
-from agent import TransformerAgent, HumanAgent, MetalearnedAgent, SystemAgent
-from trajectory import Trajectory, Rollout, Goal
+from agent import TransformerAgent, HumanAgent, MetalearnedAgent, SystemAgent, Agent
+from trajectory import Trajectory, Rollout, Goal, Batch
+from typing import List
 
 import pdb, sys
 
@@ -85,14 +86,19 @@ def build_game(game: str, split: str):
 
     return env, goal, obs, game
 
-def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldido"], new_policy: str="",
-                 seed: int=994, max_actions=3):
-    """Builds a game and run rollouts in that game"""
 
-    max_actions = max_actions  # 3
-    max_rollouts = 1  # 10
-    rollouts = []
-    #known_policies = sorted(known_policies, key=len, reverse=True)
+
+def run_rollouts(agent: Agent, policy: str, batch: Batch):
+    """Given a budget of |max_rollouts| and |max_actions| (cumulative total over all rollouts), allow an agent (starting,
+    but not necessarily ending, as |agent|) to take actions to sample data, resample data, hindsight label
+    data and train on the hindsight labeled data). This is analogous to RL training, but with a stronger emphasis on
+    forward prediction and intermittent, rapid retraining on hindsight labeled data for intrinsically motivated
+    hypothesis testing and generation.
+    """
+    max_actions = batch.args.max_actions
+    max_rollouts = batch.args.max_rollouts
+    rollouts = batch.rollouts
+
     while len(rollouts) < max_rollouts:
         trajectory = Trajectory()
         goal = Goal("get a high generalization score")
@@ -106,7 +112,6 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
             state = {"obs": obs}
             trajectory.append([state, goal, "blank"])
             action, dict_update, formatted_query = agent.predict_rollout(rollout)
-            # carry through the summary.
 
             if 'summary' in dict_update and dict_update['summary'] == '' and len(trajectory) > 3:
                 dict_update['summary'] = trajectory[-2][0]['summary']
@@ -115,15 +120,80 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
             if done:
                 break
 
-                # rollout_copy = copy.deepcopy(rollout)
-                # rollout_copy["trajectory"] = rollout.hindsight_trajectory(rollout_copy["trajectory"])
-                # rollout_copy["trajectory"][-1][0]["next_update"] = rollout_copy["trajectory"][-1][0]["expectation"]
-                # old_metalearn_action = metalearn_action
-                # metalearn_action, _, formatted_query = aux_agent.predict_rollout(rollout_copy)
-                # print(f"ACTION_UPDATE >>>> {old_metalearn_action} -> {metalearn_action}")
-                # rollout["trajectory"][-1][0]["action"] = metalearn_action
+            # key structure:
+            # auxiliary dict structure:
+            #  id, epoch -> Epoch
+            #     Epoch:
+                    # { | teacher, student_train, student_test | -> env}
+                    #  | teacher, student_train, student_test | -> List[Rollout]
+
+            #  data visualizer:
+            #     given an id, calculate relevant teacher, student, test fitnesses.
 
             # At inference time, substitute the model expectations for the next turn's update.
+            # All system commands have the following format: <command>:
+            # Training labels (key,value associations) are of the form:
+            #   training_set_id (incremented by one with each new span).
+            #   start training_set
+            #   label training_set
+            #   SysController ensures that:
+
+            #   1 epoch of meta-training:
+
+            #   Teacher pass -> creates a batch of trajectories to finetune on.
+            #      -> load train env [ done ]
+            #      -> teacher plays through, adds hindsight annotations and training instructions. [ done ]
+            #      -> eval train env fitness + hindsight labeling [ done ]
+            #      -> retrain on env fitness
+
+            #   Student (train env):
+            #      -> load train env
+            #      -> machine plays through, adding hindsight annotations + fine-tuning itself on the fly.
+            #      -> eval train env fitness + hindsight labeling
+
+            #   Student (test env):
+            #       -> load test env
+            #       -> machine plays through, adding hindsight annotations + fine-tuning itself.
+            #       -> eval train env fitness + hindsight labeling
+
+            # Reports:
+            #   1. Epoch.
+            #   2. Teacher fitness (train env).
+            #   3. Student fitness (train env).
+            #   4. Student fitness (test env).
+
+            # Improvements at the meta-epoch level:
+            # Add labeled student + teacher experiences from the train env to the aggregated experiences.
+            # Or, possibly just add labeled student experiences.
+
+            # structures:
+            #   1. Epoch:
+            #     2. Teacher rollouts + fitness (train env).
+            #     3. Student rollouts + fitness (train env).
+            #     4. Student rollouts + fitness (test env).
+
+            # one epoch:
+
+                # Human commands:
+                #  inputs: human x train x epoch x eval_retrain x run_id
+                #  valid data: train x preceding epochs
+                #  hindsight label, retrain (iteratively) until ended (no batch labels)
+                #  generate batch hindsight labels, push out to monitor data structure
+
+                #  retrain with new human batch + last epoch's agent batch -> new_agent_name
+                #  push new agent name + data keys to monitor structure such that we can
+                #  recreate training data + training process uniquely.
+
+                #  new_agent_name x train x epoch
+                #  valid data: train x preceding epochs
+                #  hindsight label the batch, push to monitor
+
+                #  new_agent_name x test x epoch
+                #  valid data: test x same epoch
+                #  hindsight label the batch, push to monitor
+
+                #  increment epoch
+
             trajectory[-1][-1] = action
             if re.match(r"restore:(.*)", action):
                 offset = int(re.match(r"restore:(.*)", action).group(1))
@@ -150,20 +220,29 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 arg_string = re.match(r"write_finetune: (.*)", action).groups[0].strip()
                 args = parser.parse_args(shlex.split(arg_string))
                 write_rollouts_finetune(args.pickle_path, args.finetune_path, args.format)
-            elif re.match(r"finetune: .*"):
+            elif re.match(r"finetune:.*", action):
                 argstring = SystemAgent().train_command(policy)
-                output = subprocess.check_output(argstring, shell=True)
                 import pdb
                 pdb.set_trace()
+                output = subprocess.check_output(argstring, shell=True)
                 model_name = re.match(SystemAgent.model_name_regex, output).groups()[0]
-                obs = f"model name: {model_name}"
+                obs = f"model_name: {model_name}"
+            elif re.match(r"fitness:.*", action):
+                fitness_data = batch.fitness()
+                print(f"fitness = {fitness_data['fitness']}")
+                print(f"mean fitness = {fitness_data['mean_fitness']}")
+                print(f"std dev fitness = {fitness_data['std_fitness']}")
+                print(f"learning = {fitness_data['learning']}")
+                print(f"mean learning = {fitness_data['mean_learning']}")
+                print(f"lengths = {fitness_data['length']}")
+                print(f"lengths = {np.mean(fitness_data['length'])}")
+                obs = f"fitness: {fitness_data}"
+            elif re.match(r"end:", action): # end the rollout early
+                break
             else:
                 obs, score, done, infos = env.step(action)
                 scores.append(score)
                 print(scores)
-
-            pprint.pprint(rollouts)
-
             if isinstance(env, FrotzEnv):
                 print(obs)
             else:
@@ -174,112 +253,33 @@ def run_rollouts(agent, policy: str, known_policies= ["whatcanido", "whatshouldi
                 # distribution.
                   break
         rollouts.append(rollout)
-
-    most_recent_game = rollouts[-1]
-    fitness = most_recent_game.fitness()
-    learning = most_recent_game.learning()
-    print(f"Train epochs: {train_epochs}")
-    print(f"Agent fitness: {fitness}")
-    print(f"Agent learning: {learning}")
-    if True: #policy != "" and (fitness > 0 or game == "zork1.z5"):
-        most_recent_game["trajectory"].append([{"obs": "data collection ended", "summary": "",
-                                                "expectation":"",
-                                                "update": "", "next_update": ""}, goal, f"data_collection_end: {inspect.getsource(data.data_filter)}"])
+        print(f"Agent rollout fitness: {rollout.fitness()}")
+        print(f"Agent rollout learning: {rollout.learning()}")
+        print(f"Batch fitness: {batch.fitness()}")
         print("Saving agent trajectory")
-        return list(agent.write_rollouts(rollouts, game, policy)) + [fitness, learning, actions]
-    else:
-        return "", "", fitness, learning, actions
+        return agent.write_rollouts(rollouts, game, policy)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--policy", default="", help="Policy used as a suffix for the filename")
 parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
 parser.add_argument("--game", default="cooking_level_2", help="String for game name")
 parser.add_argument("--split", default="train", help="one of train, valid or test")
+parser.add_argument("--run_id", default=0, help="id for training runs")
+parser.add_argument("--epoch_index", default=0, help="id for training runs")
 parser.add_argument("--seed", default=1000, help="Random seed")
 parser.add_argument("--max_actions", type=int, default=3, help="Max actions")
-parser.add_argument("--train_epochs", type=int, default=1, help="Max train epochs")
+parser.add_argument("--max_rollouts", type=int, default=1, help="Max rollouts within the batch")
+parser.add_argument("--max_train_epochs", type=int, default=1, help="Max train epochs")
+parser.add_argument("--filter", type=str)
 args = parser.parse_args()
-rollout_path = f"ttm/data/{args.policy}/grounding_data.pkl"
 
-max_train_epochs = args.train_epochs
-train_epochs = 0
-fitness = 0
-
-agent_goal = "score = 10000"
-agent = SystemAgent(agent_goal, device=0)
+agent = SystemAgent("", device=0)
 agent.args = args
 
-# Meta-learning agent.
-# Currently uses a fixed policy to achieve its objective.
-fitnesses = []
-learnings = []
-joint_learnings = []
-lengths = []
-
-while train_epochs < max_train_epochs: #and fitness < 1:
-    rollout_txt_path, rollout_pickle_path, fitness, learning, length = run_rollouts(agent, args.policy,
-                                                                                      seed=args.seed,
-                                                         max_actions=args.max_actions)
-    fitnesses.append(fitness)
-    learnings.append(learning)
-    lengths.append(length)
-    joint_learnings.append(learning["joint"])
-    #rollouts = data.read_rollouts(rollout_pickle_path)
-
-    # metalearning loop for creating new skills.
-    # action, compressed_rollout = agent.cognitive_dissonance(rollouts)
-    # trajectory = compressed_rollout["trajectory"]
-    # new_agent = None
-    # while action != "predict":
-    #     if re.match(r".*new_question_policy.*", action):
-    #         new_question_agent = MetalearnedAgent(metalearn_goal, path="ttm/data/new_question_policy/")
-    #         trajectory[-1][-1] = "new_question_policy"  # compressed version of the trace of the action.
-    #         new_question, response, formatted_query = new_question_agent.predict_rollout(compressed_rollout)
-    #         compressed_rollout["trajectory"].append([new_question, metalearn_goal, "new_prefix_policy"])
-    #     elif re.match(r".*new_prefix_policy.*", action):
-    #         new_prefix_agent = MetalearnedAgent(metalearn_goal, path="ttm/data/new_prefix_policy/")
-    #         trajectory[-1][-1] = "new_prefix_policy"  # compressed version of the trace of the action.
-    #         new_prefix, response, formatted_query = new_prefix_agent.predict_rollout(compressed_rollout)
-    #         new_agent = MetalearnedAgent(metalearn_goal, path=None)
-    #         full_prefix = new_prefix.split("\n") + ["New example:", f"{{rollout_action_str}} action: [ query: "
-    #                                                                 f"{new_question}] ", "state: ["]
-    #         # TBD: let the agent generate length and a regex parser for itself.
-    #         new_agent.load_agent(full_prefix, str(compressed_rollout), [], new_question, 100)
-    #         new_agent.save()
-    #         compressed_rollout["trajectory"].append([f"new_prefix: {new_agent.name}", metalearn_goal, "train_grounding"])
-    #         print(compressed_rollout)
-    #     elif re.match(r".*train_grounding.*", action):
-    #         run_rollouts(agent, new_agent.name, known_policies=["whatcanido", "whatshouldido"] + [new_agent.name],
-    #                      new_policy=new_agent.name)
-    #         compressed_rollout["trajectory"].append([f"ran rollouts", metalearn_goal, "cognitive_dissonance"])
-    #     action = compressed_rollout["trajectory"].actions()[-1]
-
-    # if train_epochs == 0:
-    #     agent.load_model("ttm/gpt2-rollout")
-    # else:
-    #     agent.load_model("ttm/gpt2-rollout-post")
-    # agent.train("ttm/gpt2-rollout-post", rollout_path, rollout_path)
-    #
-    # # meta-learning.
-    # metalearn_goal = metalearn_prefix + agent_goal
-    # agent.learning_trajectory.append([f"score = {sum(scores)}", metalearn_goal, "ground_score"])
-    # agent.reset_state(metalearn_goal, scores)
-    # rollout_path = agent.write_rollouts(agent.rollouts, "metalearning-post")
-
-    # rollout_path = "ttm/data/rollouts_metalearning.txt"
-    # if train_epochs == 0:
-    #     agent.load_model("gpt2")
-    # else:
-    #     agent.load_model("ttm/gpt2-metalearn")
-    # agent.train("ttm/gpt2-metalearn", rollout_path, rollout_path)
-
-    # train the agent on the data.
-    print(f"fitness = {fitnesses}")
-    print(f"fitness = {np.mean(fitnesses)}")
-    print(f"std dev fitness = {np.std(fitnesses)}")
-    print(f"learning = {learnings}")
-    print(f"learning = {np.mean(joint_learnings)}")
-    print(f"lengths = {lengths}")
-    print(f"lengths = {np.mean(lengths)}")
-    print(f"num saved epochs/total epochs: {len([f for f in fitnesses if f > 0])}/{len(fitnesses)}")
+# epochs.
+train_epochs = 0
+while train_epochs < args.max_train_epochs:
+    batch = Batch([], args)
+    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, batch)
     train_epochs += 1
