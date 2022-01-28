@@ -3,7 +3,7 @@ import copy
 import random
 import re
 import subprocess
-from shlex import shlex
+from shlex import split as shsplit
 
 import gym
 import numpy as np
@@ -140,15 +140,22 @@ def run_rollouts(agent: Agent, policy: str, args):
 
             #   1 epoch of meta-training:
 
+            #   First data filters:
+            #       Includes all data before it.
+            #   Second pass filter:
+            #       Include high-quality + contrastive data, taking all the lessons from data2vec.
+            #
             #   Teacher pass -> creates a batch of trajectories to finetune on.
             #      -> load train env [ done ]
-            #      -> teacher plays through, adds hindsight annotations and training instructions. [ done ]
+            #      -> teacher plays through, adds hindsight annotations and trains occasionally. [ done ]
+            #      -> filter: prior teacher and student batches. [ done ]
             #      -> eval train env fitness + hindsight labeling [ done ]
-            #      -> retrain on env fitness
+            #      -> retrain on env fitness [ done ]
 
             #   Student (train env):
             #      -> load train env
             #      -> machine plays through, adding hindsight annotations + fine-tuning itself on the fly.
+            #      -> filter: prior teacher and student batches, including itself.
             #      -> eval train env fitness + hindsight labeling
 
             #   Student (test env):
@@ -218,14 +225,12 @@ def run_rollouts(agent: Agent, policy: str, args):
                 rollout.agent = {"name": agent.name, "engine": agent.engine}
             elif re.match(r"sample_data: *", action):
                 sample_arg_string = re.match(r"write_finetune: (.*)", action).groups[0].strip()
-                sample_args = parser.parse_args(shlex.split(sample_arg_string))
-                write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format)
+                sample_args = parser.parse_args(shsplit(sample_arg_string))
+                write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format, args)
             elif re.match(r"finetune:.*", action):
-                argstring = SystemAgent().train_command(policy)
-                import pdb
-                pdb.set_trace()
-                output = subprocess.check_output(argstring, shell=True)
-                model_name = re.match(SystemAgent.model_name_regex, output).groups()[0]
+                argstring = shsplit(SystemAgent("").train_command(policy))
+                output = subprocess.check_output(argstring)
+                model_name = re.match(SystemAgent.model_name_regex, str(output)).groups()[0]
                 obs = f"model_name: {model_name}"
             elif re.match(r"fitness:.*", action):
                 fitness_data = Batch.fitness(rollouts)
@@ -266,12 +271,14 @@ parser.add_argument("--policy", default="", help="Policy used as a suffix for th
 parser.add_argument("--meta_policy", default="baseline", help="Policy used for the metalearning agent")
 parser.add_argument("--env", default="cooking_level_2", help="String for high-level environment name")
 parser.add_argument("--split", default="train", help="one of train, valid or test")
-parser.add_argument("--run_id", default=0, help="id for training runs")
-parser.add_argument("--epoch_index", default=0, help="id for training runs")
+parser.add_argument("--run_id", default=0, help="id of the training run")
+parser.add_argument("--epoch", default=0, help="epoch counter for training runs")
 parser.add_argument("--seed", default=1000, help="Random seed")
 parser.add_argument("--max_actions", type=int, default=3, help="Max actions")
 parser.add_argument("--max_rollouts", type=int, default=1, help="Max rollouts within the batch")
 parser.add_argument("--max_train_epochs", type=int, default=1, help="Max train epochs")
+parser.add_argument("--partition", type=str, default="teacher", help="shortname (one of teacher, student_train, "
+                                                                     "or student_test)")
 parser.add_argument("--filter", type=str)
 args = parser.parse_args()
 

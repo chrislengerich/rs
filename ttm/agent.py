@@ -580,6 +580,9 @@ class SystemAgent(Agent):
 
     def predict_rollout(self, rollout: Rollout):
         # there is a start placeholder observation + a single token.
+        # if len(rollout["trajectory"]) == 2:
+        #     return "finetune:", {"summary": "", "expectation": "", "update": "",
+        #     "next_update": ""}, ""
         if len(rollout["trajectory"]) == 2:
             return self.load_env(self.args.env, self.args.split), {"summary": "", "expectation": "", "update": "",
             "next_update": ""}, ""

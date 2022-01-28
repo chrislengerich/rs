@@ -68,8 +68,22 @@ def data_filter(agent_name, game, r):
   return ((agent_name == "human") and ((re.match(
       ".*train.*", game))) and any(["hindsight_summary" in ri for ri in r["trajectory"].states()]))
 
+def partition_filter(current_args, rollout_args):
+  """Return True if the rollout is valid training data."""
+  if not current_args: # used for off-policy partitioning.
+    return True
+  if current_args.partition == "teacher" or current_args.partition == "student_train":
+    return rollout_args.run_id == current_args.run_id and rollout_args.epoch <= current_args.epoch and \
+           rollout_args.partition != "student_test"
+  elif current_args.partition == "student_test":
+    # no historical test data + no data from the current epoch's train env.
+    return (rollout_args.run_id == current_args.run_id and rollout_args.epoch < current_args.epoch and
+            rollout_args.partition != "student_test") or (rollout_args.run_id == current_args.run_id and
+                                                          rollout_args.epoch == current_args.epoch and
+                                                          rollout_args.partition != "student_train")
+
 def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath='rollouts.txt',
-                            format='model_inference_str'):
+                            format='model_inference_str', current_args=None, current_batch_fitness=True):
   rollouts_dict = read_rollouts(rollouts_filepath)
 
   with open(finetune_filepath, 'w') as f:
@@ -90,58 +104,66 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
           print(r.fitness())
           print(r.learning())
           print(r.agent['name'])
-        if not data_filter(agent_name, key, r):
+        if not data_filter(agent_name, key, r) or not partition_filter(current_args, r.args):
           continue
         print("writing")
         selected_rollouts.append(r)
 
-      # TODO: group rollouts by sub-contexts.
-      batch_fitness = Batch.fitness(selected_rollouts)['mean_fitness']
-
+      batches = {}
       for r in selected_rollouts:
-        agent_name = r.agent.get('name', '')
-        total_rollouts +=1
-        trajs = r.hindsight_trajectories(format)
-        for t in trajs:
-          if t[0][0] == '':
-            continue
-          if format == "model_inference_str":
-            prompt, completion = t.model_inference_str()
-          elif format == "model_expectation_inference_str":
-            prompt, completion = t.model_expectation_inference_str()
-          elif format == "model_action_inference_str":
-            prompt, completion = t.model_action_inference_str()
-          elif format == "imitation_inference_str":
-            prompt, completion = t.imitation_inference_str()
-          elif format == "expected_observation_update":
-            prompt, completion = t.expected_observation_key("update")
-          elif format == "expected_observation_summary":
-            prompt, completion = t.expected_observation_key("summary")
-          elif format == "obs_summary_t_to_expectation_action":
-            prompt, completion = t.obs_summary_t_to_expectation_action_str(str(r.fitness()))
-          elif format == "hindsight_expectation_str":
-            hindsight_value = t.states()[-1].get("hindsight_value", -1)
-            hindsight_value = format_hindsight_value(hindsight_value)
-            batch_fitness_str = format_batch_fitness_value(batch_fitness)
-            prompt, completion = t.hindsight_expectation_str(hindsight_value, batch_fitness_str)
-          elif format == "expected_observation":
-            prompt, completion = t.expected_observation()
-          else:
-            raise Exception(f"Unknown format: {format}")
-          total_examples += 1
-          if agent_name == "human" or agent_name == "":
-            human_examples += 1
-          else:
-            agent_examples += 1
-          if re.match('.*cooking.*', key):
-            game_title = "cooking"
-          else:
-            game_title = key
-          current_count = rollouts_per_game.setdefault(game_title, 0)
-          rollouts_per_game[game_title] = current_count + 1
-          j = {"prompt": prompt, "completion": " " + completion}
-          f.write(json.dumps(j))
-          f.write('\n')
+        key = str(r.args.epoch) + " " + r.args.partition
+        batches.setdefault(key, []).append(r)
+
+      for key, selected_rollouts in batches.items():
+        if (str(r.current_args.epoch) + " " + r.current_args.partition) == key and not current_batch_fitness:
+          batch_fitness = ""
+        else:
+          batch_fitness = Batch.fitness(selected_rollouts)['mean_fitness']
+
+        for r in selected_rollouts:
+          agent_name = r.agent.get('name', '')
+          total_rollouts +=1
+          trajs = r.hindsight_trajectories(format)
+          for t in trajs:
+            if t[0][0] == '':
+              continue
+            if format == "model_inference_str":
+              prompt, completion = t.model_inference_str()
+            elif format == "model_expectation_inference_str":
+              prompt, completion = t.model_expectation_inference_str()
+            elif format == "model_action_inference_str":
+              prompt, completion = t.model_action_inference_str()
+            elif format == "imitation_inference_str":
+              prompt, completion = t.imitation_inference_str()
+            elif format == "expected_observation_update":
+              prompt, completion = t.expected_observation_key("update")
+            elif format == "expected_observation_summary":
+              prompt, completion = t.expected_observation_key("summary")
+            elif format == "obs_summary_t_to_expectation_action":
+              prompt, completion = t.obs_summary_t_to_expectation_action_str(str(r.fitness()))
+            elif format == "hindsight_expectation_str":
+              hindsight_value = t.states()[-1].get("hindsight_value", -1)
+              hindsight_value = format_hindsight_value(hindsight_value)
+              batch_fitness_str = format_batch_fitness_value(batch_fitness)
+              prompt, completion = t.hindsight_expectation_str(hindsight_value, batch_fitness_str)
+            elif format == "expected_observation":
+              prompt, completion = t.expected_observation()
+            else:
+              raise Exception(f"Unknown format: {format}")
+            total_examples += 1
+            if agent_name == "human" or agent_name == "":
+              human_examples += 1
+            else:
+              agent_examples += 1
+            if re.match('.*cooking.*', key):
+              game_title = "cooking"
+            else:
+              game_title = key
+            current_count = rollouts_per_game.setdefault(game_title, 0)
+            rollouts_per_game[game_title] = current_count + 1
+            j = {"prompt": prompt, "completion": " " + completion}
+            f.write(json.dumps(j))
+            f.write('\n')
     print(rollouts_per_game)
     print(f"total_rollouts: {total_rollouts}")
     print(f"total_examples: {total_examples}")
