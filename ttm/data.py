@@ -111,8 +111,16 @@ def partition_filter(current_args, rollout_args):
                                                           rollout_args.epoch == current_args.epoch and
                                                           rollout_args.partition != "student_train")
 
+def get_args(rollouts_filepath: str, run_id: int, epoch: int, partition: str):
+  for key, val in read_rollouts(rollouts_filepath).items():
+    for r in val:
+      if r.args.run_id == run_id and r.args.epoch == epoch and r.args.partition == partition:
+        return r.args
+  else:
+    raise Exception(f"Could not find rollout with run_id={run_id}, epoch={epoch}, partition={partition}")
+
 def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath='rollouts.txt',
-                            format='model_inference_str', current_args=None, current_batch_fitness=True):
+                            format='model_inference_str', current_args=None, hindsight_fitness_current_batch=True):
   rollouts_dict = read_rollouts(rollouts_filepath)
 
   with open(finetune_filepath, 'w') as f:
@@ -145,8 +153,8 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
 
       for key, selected_rollouts in batches.items():
         if (str(current_args.epoch) + " " + current_args.partition) == key and not \
-            current_batch_fitness:
-          batch_fitness = ""
+            hindsight_fitness_current_batch:
+          batch_fitness = -1 # not set
         else:
           batch_fitness = Batch.fitness(selected_rollouts)['mean_fitness']
 

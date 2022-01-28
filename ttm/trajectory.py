@@ -149,7 +149,7 @@ class Trajectory(list):
             state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
                 "hindsight_expectation"]))
             if i == len(self) - 1:
-                state_others_context = f"fitness: '{value_str}' batch_fitness: '{batch_fitness_str}"
+                state_others_context = f"fitness: '{value_str}' batch_fitness: '{batch_fitness_str}'"
             else:
                 state_others_context = ""  # self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))
             # state_others_pred = ""
