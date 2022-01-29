@@ -229,7 +229,7 @@ def run_rollouts(agent: Agent, policy: str, args):
                 write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format, args)
                 obs = f"sampled:"
             elif re.match(r"finetune:.*", action):
-                if rollout.agent["name"] != "human" or True: # for testing
+                if rollout.agent["name"] != "human": # for testing
                     sample_arg_string = shsplit(SystemAgent("").write_finetune(args))
                     #sample_args = parser.parse_args(shsplit(sample_arg_string))
                     output = subprocess.check_output(sample_arg_string)
@@ -281,6 +281,7 @@ def run_rollouts(agent: Agent, policy: str, args):
         print(f"Agent rollout fitness: {rollout.fitness()}")
         print(f"Agent rollout learning: {rollout.learning()}")
         print(f"Batch fitness: {Batch.fitness(rollouts)}")
+        print(f"Args: {args}")
         print("Saving agent trajectory")
         txt_path, pickle_path = agent.write_rollouts(rollouts, game, policy, args)
     return txt_path, pickle_path
@@ -292,7 +293,7 @@ parser.add_argument("--meta_policy", default="baseline", help="Policy used for t
 parser.add_argument("--env", default="cooking_level_2", help="String for high-level environment name")
 parser.add_argument("--split", default="train", help="one of train, valid or test")
 parser.add_argument("--run_id", default=0, help="id of the training run")
-parser.add_argument("--epoch", default=0, help="epoch counter for training runs")
+parser.add_argument("--epoch", default=-1, help="epoch counter for training runs")
 parser.add_argument("--seed", default=1000, help="Random seed")
 parser.add_argument("--max_actions", type=int, default=3, help="Max actions")
 parser.add_argument("--max_rollouts", type=int, default=1, help="Max rollouts within the batch")
@@ -305,8 +306,7 @@ args = parser.parse_args()
 agent = SystemAgent("", device=0)
 agent.args = args
 
-# epochs.
-train_epochs = 0
-while train_epochs < args.max_train_epochs:
+target_epochs = range(0, args.max_train_epochs) if args.epoch == -1 else [args.epoch]
+for epoch in target_epochs:
+    args.epoch = epoch
     rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, args)
-    train_epochs += 1

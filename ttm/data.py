@@ -75,7 +75,8 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
   # filter out only the rollouts where the run_id matches.
   rollouts_list = []
   for key, val in rollouts.items():
-    if re.match(f".*run_id={run_id}.*", key):
+    print(val[0].args)
+    if re.match(f".*run_id='{run_id}'.*", key):
       rollouts_list.extend(val)
 
   fitnesses = []
@@ -89,7 +90,8 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
     for p in partitions:
       selected_rollouts = []
       for r in rollouts_list:
-          if r.args.run_id == run_id and r.args.epoch == e and r.args.partition == p:
+          if int(r.args.run_id) == run_id and int(r.args.epoch) == e and r.args.partition == p:
+            print("appending")
             selected_rollouts.append(r)
           fitness = Batch.fitness(selected_rollouts)
           epoch_fitness[p] = fitness
