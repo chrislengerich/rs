@@ -237,6 +237,7 @@ def run_rollouts(agent: Agent, policy: str, args):
                     argstring = shsplit(SystemAgent("").train_command(policy))
                     try:
                         output = subprocess.check_output(argstring)
+                        print(output.decode("utf-8"))
                         model_name = re.match(SystemAgent.model_name_regex, str(output)).groups()[0]
                         assert model_name
                     except Exception as e:
@@ -244,11 +245,11 @@ def run_rollouts(agent: Agent, policy: str, args):
                         pdb.set_trace()
                     obs = f"finetuned: {model_name}"
                     agent.update_engine(model_name, policy)
-                    agent.write_agent(policy, model_name, f"ttm/data/{policy}/grounding_data.jsonl")
+                    agent.register_agent(policy, model_name, f"ttm/data/{policy}/grounding_data.jsonl")
             elif re.match(r"register:.*", action): # used for testing only
                 model_name = re.match("register: (.*)", action).groups()[0]
                 # assumes the most recent grounding data file is the output file.
-                agent.write_agent(policy, model_name, f"ttm/data/{policy}/grounding_data.jsonl")
+                agent.register_agent(policy, model_name, f"ttm/data/{policy}/grounding_data.jsonl")
                 agent.update_engine(model_name)
                 obs = f"registered: {model_name}"
             elif re.match(r"fitness:.*", action):  # used for testing only

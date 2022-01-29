@@ -100,7 +100,7 @@ class Agent:
             ["tw-make", "tw-treasure_hunter", "--level", str(level), "--output", f"tw_games/{name}", "--force"])
         return name
 
-    def write_agent(self, policy: str, engine_name: str, training_data_path: str):
+    def register_agent(self, policy: str, engine_name: str, training_data_path: str):
         pickle_path = f"ttm/data/{policy}/agent_registry.pkl"
         if os.path.exists(pickle_path):
             with open(pickle_path, 'rb') as f:
@@ -577,9 +577,9 @@ class HumanAgent(Agent):
 
     # predict a rollout, accounting for hindsight learning.
     def predict_rollout(self, rollout: Rollout):
-        hindsight_summary = input("hindsight summary: ")
+        hindsight_summary = input("hindsight_summary: ")
         if hindsight_summary != "":
-            length = input("window: ")
+            length = input("hindsight_length: ")
             value = input("value: ") # 100.0.
         else:
             length = ""
@@ -607,9 +607,8 @@ class SystemAgent(Agent):
         # if len(rollout["trajectory"]) == 2:
         #     return "register: test", {"summary": "", "expectation": "", "update": "", "next_update": "",
         #                               "invisible": True}, ""
-        if len(rollout["trajectory"]) == 2:
-            return "finetune:", {"summary": "", "expectation": "", "update": "",
-                                                                   "next_update": ""}, ""
+
+        # bootstraps the agent.
         if len(rollout["trajectory"]) == 2:
             return self.load_env(self.args.env, self.args.split), {"summary": "", "expectation": "", "update": "",
             "next_update": "", "invisible": True}, ""

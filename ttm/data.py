@@ -183,11 +183,20 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
               hindsight_value = t.states()[-1].get("hindsight_value", -1)
               hindsight_value = format_hindsight_value(hindsight_value)
               batch_fitness_str = format_batch_fitness_value(batch_fitness)
+              prompts, completions = [], []
               prompt, completion = t.hindsight_expectation_str(hindsight_value, batch_fitness_str)
+              prompts.append(prompt)
+              completions.append(completion)
+              prompt, completion = t.hindsight_labeling_str(hindsight_value, batch_fitness_str)
+              assert prompt in prompts
+              if completion not in completions:
+                prompts.append(prompt)
+                completions.append(completion)
             elif format == "expected_observation":
               prompt, completion = t.expected_observation()
             else:
               raise Exception(f"Unknown format: {format}")
+
             total_examples += 1
             if agent_name == "human" or agent_name == "":
               human_examples += 1
@@ -199,9 +208,10 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
               game_title = key
             current_count = rollouts_per_game.setdefault(game_title, 0)
             rollouts_per_game[game_title] = current_count + 1
-            j = {"prompt": prompt, "completion": " " + completion}
-            f.write(json.dumps(j))
-            f.write('\n')
+            for (prompt, completion) in zip(prompts, completions):
+              j = {"prompt": prompt, "completion": " " + completion}
+              f.write(json.dumps(j))
+              f.write('\n')
     print(rollouts_per_game)
     print(f"total_rollouts: {total_rollouts}")
     print(f"total_examples: {total_examples}")

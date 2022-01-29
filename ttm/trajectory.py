@@ -136,7 +136,7 @@ class Trajectory(list):
         return string_repr, completion_str
 
     def hindsight_expectation_str(self, value_str: str = "4", batch_fitness_str=""):
-        """Expect the next state and act to explore accordingly."""
+        """Predict what will happen in the future and how valuable it will be, using labels from the future."""
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
@@ -146,8 +146,40 @@ class Trajectory(list):
             state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
             state_obs = self.strip_state(str(state_obs))
             state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            for key in ["hindsight_summary", "hindsight_length", "value"]:
+                state_others[key] = ""
+            if "hindsight_expectation" not in state_others:
+                state_others["hindsight_expectation"] = ""
             state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
-                "hindsight_expectation"]))
+                "hindsight_expectation", "hindsight_summary", "hindsight_length", "value"]))
+            if i == len(self) - 1:
+                state_others_context = f"fitness: '{value_str}' batch_fitness: '{batch_fitness_str}'"
+            else:
+                state_others_context = ""  # self.strip_state(self.dict_to_str(state_others, causal_order=["next_obs"]))
+            # state_others_pred = ""
+            state_prefix = f"step {i} "  # unused for now.
+            string_repr += f"state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others_context}] action: [ {action} ]\n"
+            else:
+                string_repr += f"{state_others_context}"
+                completion_str = f" {state_others_pred}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+    def hindsight_labeling_str(self, value_str: str = "4", batch_fitness_str=""):
+        """Emit labels from the past."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            state_others["hindsight_expectation"] = ""
+            state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                "hindsight_expectation", "hindsight_summary", "hindsight_length", "value"]))
             if i == len(self) - 1:
                 state_others_context = f"fitness: '{value_str}' batch_fitness: '{batch_fitness_str}'"
             else:
