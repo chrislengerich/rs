@@ -4,6 +4,7 @@ import pickle
 import pprint
 
 import subprocess
+import time
 
 import numpy as np
 from transformers import OpenAIGPTTokenizer, OpenAIGPTModel, OpenAIGPTLMHeadModel, AdamW, \
@@ -314,8 +315,19 @@ class GPT3Agent(Agent):
         print(self.engine)
         # temperature=1,
         if re.match(".*ft-.*", self.engine):
-            response = openai.Completion.create(model=self.engine, prompt=prompt, max_tokens=max_tokens,
-                                             top_p=0.95, n=self.n, stop="\n")
+            num_runs = 0
+            response = None
+            while num_runs < 3:
+                try:
+                    response = openai.Completion.create(model=self.engine, prompt=prompt, max_tokens=max_tokens,
+                                                     top_p=0.95, n=self.n, stop="\n")
+                    break
+                except Exception as e:
+                    num_runs += 1
+                    time.sleep(2)
+            if not response:
+                import pdb
+                pdb.set_trace()
         else:
             response = openai.Completion.create(engine=self.engine, prompt=prompt, max_tokens=max_tokens,
                                                 top_p=0.95, n=self.n, stop="\n")

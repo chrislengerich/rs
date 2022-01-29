@@ -140,6 +140,9 @@ class Trajectory(list):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
+            if 'invisible' in state:
+                continue
+
             state = self.trim_commas(state)
             if i < len(self) - 6:
                 continue
