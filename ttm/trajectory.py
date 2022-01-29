@@ -336,6 +336,7 @@ class Rollout(dict):
             obs_diversity, "joint": np.mean([action_diversity, obs_diversity, (1- blank_ratio)])}
 
     def hindsight_trajectory(self, trajectory: Trajectory, unused_format: str):
+        trajectory = Trajectory([t for t in trajectory if not 'invisible' in t[0]])
         trajectory.append(({'obs': 'end game'}, trajectory[-1][1], "sequence_end"))
 
         num_obs = 1

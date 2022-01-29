@@ -112,8 +112,8 @@ class Agent:
         with open(pickle_path, 'wb') as f:
             pickle.dump(agents, f)
 
-    def update_engine(self, new_engine: str):
-        file_path = f"ttm/data/{self.name}/engine"
+    def update_engine(self, new_engine: str, policy: str):
+        file_path = f"ttm/data/{policy}/engine"
         if os.path.exists(file_path):
             with open(file_path, "w") as f:
                 f.write(new_engine)
@@ -604,22 +604,28 @@ class SystemAgent(Agent):
         # if len(rollout["trajectory"]) == 2:
         #     return "finetune:", {"summary": "", "expectation": "", "update": "",
         #     "next_update": ""}, ""
+        # if len(rollout["trajectory"]) == 2:
+        #     return "register: test", {"summary": "", "expectation": "", "update": "", "next_update": "",
+        #                               "invisible": True}, ""
         if len(rollout["trajectory"]) == 2:
-            return "register: test", {"summary": "", "expectation": "", "update": "", "next_update": ""}, ""
+            return "finetune:", {"summary": "", "expectation": "", "update": "",
+                                                                   "next_update": ""}, ""
         if len(rollout["trajectory"]) == 2:
             return self.load_env(self.args.env, self.args.split), {"summary": "", "expectation": "", "update": "",
-            "next_update": ""}, ""
+            "next_update": "", "invisible": True}, ""
         elif len(rollout["trajectory"]) == 3:
             return self.load_agent(self.args.meta_policy), {"summary": "", "expectation": "", "update": "",
-            "next_update": ""}, ""
+            "next_update": "", "invisible": True}, ""
 
     def load_agent(self, agent):
         return f"agent: '{agent}'"
 
-    def write_finetune(self, agent):
+    def write_finetune(self, args):
         """Returns the arg string for the data filtering pass."""
-        return f"--pickle_path=ttm/data/{agent}/grounding_data.pkl --finetune_path=ttm/data/" \
-               f"{agent}/grounding_data.jsonl --format=hindsight_expectation_str"
+        return f"python ttm/write_finetune.py --pickle_path=ttm/data/{args.policy}/grounding_data.pkl " \
+               f"--finetune_path=ttm/data/" \
+               f"{args.policy}/grounding_data.jsonl --format=hindsight_expectation_str --epoch={args.epoch} " \
+               f"--run_id={args.run_id} --partition={args.partition} --hindsight_fitness_current_batch=0"
 
     def train_command(self, agent):
         """Returns the command-line string for the fine-tuning pass"""

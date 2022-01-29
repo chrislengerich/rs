@@ -101,7 +101,7 @@ def run_rollouts(agent: Agent, policy: str, args):
 
     while len(rollouts) < max_rollouts:
         trajectory = Trajectory()
-        goal = Goal("get a high generalization score")
+        goal = Goal("get a high batch_fitness")
         score, actions, done = 0, 0, False
         trajectory.append([{"obs": "", "summary": "", "expectation": "", "update": "", "next_update": ""}, goal, \
                                                                                                             "start"])
@@ -223,27 +223,35 @@ def run_rollouts(agent: Agent, policy: str, args):
                 else:
                     agent = MetalearnedAgent(agent_goal, device=0, path=f"ttm/data/{agent_name}/")
                 rollout.agent = {"name": agent.name, "engine": agent.engine}
-            elif re.match(r"sample_data: *", action):
-                sample_arg_string = re.match(r"write_finetune: (.*)", action).groups[0].strip()
+            elif re.match(r"sample_data:.*", action):
+                sample_arg_string = re.match(r"sample_data: (.*)", action).groups[0].strip()
                 sample_args = parser.parse_args(shsplit(sample_arg_string))
                 write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format, args)
                 obs = f"sampled:"
             elif re.match(r"finetune:.*", action):
-                if rollout.agent["name"] != "human":
+                if rollout.agent["name"] != "human" or True: # for testing
+                    sample_arg_string = shsplit(SystemAgent("").write_finetune(args))
+                    #sample_args = parser.parse_args(shsplit(sample_arg_string))
+                    output = subprocess.check_output(sample_arg_string)
+                    print(output.decode("utf-8"))
                     argstring = shsplit(SystemAgent("").train_command(policy))
-                    output = subprocess.check_output(argstring)
-                    model_name = re.match(SystemAgent.model_name_regex, str(output)).groups()[0]
+                    try:
+                        output = subprocess.check_output(argstring)
+                        model_name = re.match(SystemAgent.model_name_regex, str(output)).groups()[0]
+                        assert model_name
+                    except Exception as e:
+                        import pdb
+                        pdb.set_trace()
                     obs = f"finetuned: {model_name}"
-                    agent.update_engine(model_name)
-                    agent.write_agent(policy, model_name, "ttm/data/{agent}/grounding_data.jsonl")
-            elif re.match(r"register:.*", action):
-                # used for testing only
+                    agent.update_engine(model_name, policy)
+                    agent.write_agent(policy, model_name, f"ttm/data/{policy}/grounding_data.jsonl")
+            elif re.match(r"register:.*", action): # used for testing only
                 model_name = re.match("register: (.*)", action).groups()[0]
                 # assumes the most recent grounding data file is the output file.
                 agent.write_agent(policy, model_name, f"ttm/data/{policy}/grounding_data.jsonl")
                 agent.update_engine(model_name)
                 obs = f"registered: {model_name}"
-            elif re.match(r"fitness:.*", action):
+            elif re.match(r"fitness:.*", action):  # used for testing only
                 fitness_data = Batch.fitness(rollouts)
                 print(f"fitness = {fitness_data['fitness']}")
                 print(f"mean fitness = {fitness_data['mean_fitness']}")
