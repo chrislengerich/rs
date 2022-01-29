@@ -53,7 +53,7 @@ def metalearn(agent, max_train_epochs=1):
         agent.train("ttm/gpt2-metalearn", rollout_path, rollout_path)
         train_epochs += 1
 
-def build_game(game: str, split: str):
+def build_game(game: str, split: str, agent):
     """Split is one of 'train', 'valid', 'test'.
 
         # Jericho games have no split associated with them.
@@ -88,7 +88,7 @@ def build_game(game: str, split: str):
 
 
 
-def run_rollouts(agent: Agent, policy: str, args):
+def run_rollouts(policy: str, args):
     """Given a budget of |max_rollouts| and |max_actions| (cumulative total over all rollouts), allow an agent (starting,
     but not necessarily ending, as |agent|) to take actions to sample data, resample data, hindsight label
     data and train on the hindsight labeled data). This is analogous to RL training, but with a stronger emphasis on
@@ -100,6 +100,9 @@ def run_rollouts(agent: Agent, policy: str, args):
     rollouts = []
 
     while len(rollouts) < max_rollouts:
+        agent = SystemAgent("", device=0)
+        agent.args = args
+
         trajectory = Trajectory()
         goal = Goal("get a high batch_fitness")
         score, actions, done = 0, 0, False
@@ -212,7 +215,7 @@ def run_rollouts(agent: Agent, policy: str, args):
                 match = re.match(r"load:.*\['game':.*'(.*)',.*'split':.*'(.*)'\]",
                                  action)
                 game, split = match.groups()
-                env, goal, obs, game = build_game(game, split)
+                env, goal, obs, game = build_game(game, split, agent)
             elif re.match(r"agent:.*", action):
                 match = re.match("agent:.*'(.*)'", action)
                 agent_name = match.groups()[0]
@@ -303,10 +306,7 @@ parser.add_argument("--partition", type=str, default="teacher", help="shortname 
 parser.add_argument("--filter", type=str)
 args = parser.parse_args()
 
-agent = SystemAgent("", device=0)
-agent.args = args
-
 target_epochs = range(0, args.max_train_epochs) if args.epoch == -1 else [args.epoch]
 for epoch in target_epochs:
     args.epoch = epoch
-    rollout_txt_path, rollout_pickle_path = run_rollouts(agent, args.policy, args)
+    rollout_txt_path, rollout_pickle_path = run_rollouts(args.policy, args)
