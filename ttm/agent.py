@@ -385,7 +385,8 @@ class MetalearnedAgent(GPT3Agent):
         expected_observation_summary, _ = rollout["trajectory"].expected_observation_key("summary")
         expected_observation, _ = rollout["trajectory"].expected_observation()
         obs_summary_t_to_expectation_action, _ = rollout["trajectory"].obs_summary_t_to_expectation_action_str()
-        hindsight_expectation_str, _ = rollout["trajectory"].hindsight_expectation_str("high", "high")
+        new_rollout = rollout.hindsight_trajectory_inference(rollout["trajectory"])
+        hindsight_expectation_str, _ = new_rollout.hindsight_expectation_str("high", "high")
         agent_type = "finetuned"
         if agent_type == "finetuned":
             prefix = self.prefix_ft
