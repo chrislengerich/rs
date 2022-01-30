@@ -73,7 +73,7 @@ class Trajectory(list):
         string_repr = ""
         for i,c in enumerate(causal_order):
             if c in dict:
-                repr = re.sub("[\'\"]", "", str(dict[c]))
+                repr = re.sub("[\'\"\[\]]", "", str(dict[c]))
                 string_repr += f"'{c}': '{repr}', "
                 if i == len(causal_order) - 1:
                     string_repr = string_repr[:-2]
@@ -136,6 +136,41 @@ class Trajectory(list):
         return string_repr, completion_str
 
     def hindsight_expectation_str(self, value_str: str = "4", batch_fitness_str=""):
+        """Predict what will happen in the future and how valuable it will be, using labels from the future."""
+        goal = str(self.goals()[0])
+        string_repr = f"goal: [{goal}]\n"
+        for i, (state, _, action) in enumerate(self):
+            if 'invisible' in state:
+                continue
+
+            state = self.trim_commas(state)
+            if i < len(self) - 6:
+                continue
+            state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
+            state_obs = self.strip_state(str(state_obs))
+            state_others = dict([item for item in list(state.items()) if item[0] != 'obs'])
+            # for key in ["hindsight_summary", "hindsight_length", "value"]:
+            #     state_others[key] = ""
+            if "hindsight_expectation" not in state_others:
+                state_others["hindsight_expectation"] = ""
+            state_others_pred = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                "hindsight_expectation", "hindsight_summary", "hindsight_length", "value"]))
+            if i == len(self) - 1:
+                state_others_context = f"fitness: '{value_str}' batch_fitness: '{batch_fitness_str}'"
+            else:
+                state_others_context = self.strip_state(self.dict_to_str(state_others, causal_order=[
+                    "hindsight_expectation"]))
+            # state_others_pred = ""
+            state_prefix = f"step {i} "  # unused for now.
+            string_repr += f"state: [{state_obs},"
+            if i < len(self) - 1:
+                string_repr += f"{state_others_context}] action: [ {action} ]\n"
+            else:
+                string_repr += f"{state_others_context}"
+                completion_str = f" {state_others_pred}] action: [ {action} ]\n"
+        return string_repr, completion_str
+
+    def hindsight_expectation_str_old(self, value_str: str = "4", batch_fitness_str=""):
         """Predict what will happen in the future and how valuable it will be, using labels from the future."""
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
@@ -370,6 +405,40 @@ class Rollout(dict):
                 "obs_diversity": \
             obs_diversity, "joint": np.mean([action_diversity, obs_diversity, (1- blank_ratio)])}
 
+    def hindsight_trajectory_inference(self, trajectory: Trajectory):
+        for s in trajectory:
+            s[0]['hindsight_data'] = []
+
+        # label the past.
+        for i in range(len(trajectory) - 1, 0, -1):
+            if trajectory.states()[i].get('hindsight_summary', '') != '':
+                length = int(trajectory[i][0]['hindsight_length'])
+                for j in range(i - length, i):
+                    hindsight_data = {
+                        'hindsight_summary': trajectory[i][0]['hindsight_summary'],
+                        'hindsight_length': length,
+                        'hindsight_value': trajectory[i][0]['value']
+                    }
+                    trajectory[j][0].setdefault(
+                        'hindsight_data', []).append(hindsight_data)
+
+        new_traj = copy.deepcopy(trajectory)
+        i = len(new_traj)
+        for s in new_traj:
+            s[0]['hindsight_expectation'] = ''
+        for j in range(len(new_traj) - 1):
+            if 'hindsight_data' in new_traj[j][0]:
+                # summarize and flatten hindsight trajectories which would have been visible up to time t-1.
+                visible_summaries = []
+                for d in new_traj[j][0]['hindsight_data']:
+                    if j + d['hindsight_length'] < i - 1:
+                        visible_summaries.append(d)
+                new_traj[j][0]['hindsight_expectation'] = " || ".join([d['hindsight_summary'] for d in
+                                                                       visible_summaries])
+                new_traj[j][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
+                                                             visible_summaries])
+        return new_traj
+
     def hindsight_trajectory(self, trajectory: Trajectory, unused_format: str):
         trajectory = Trajectory([t for t in trajectory if not 'invisible' in t[0]])
         trajectory.append(({'obs': 'end game'}, trajectory[-1][1], "sequence_end"))
@@ -393,19 +462,15 @@ class Rollout(dict):
         # label with dynamic-range hindsight trajectories.
         for i in range(len(trajectory)-1,0,-1):
             if trajectory.states()[i].get('hindsight_summary', '') != '':
-
                 length = int(trajectory[i][0]['hindsight_length'])
                 for j in range(i-length, i):
+                    hindsight_data = {
+                        'hindsight_summary': trajectory[i][0]['hindsight_summary'],
+                        'hindsight_length': length,
+                        'hindsight_value': trajectory[i][0]['value']
+                    }
                     trajectory[j][0].setdefault(
-                        'hindsight_expectation', []).append(trajectory[i][0][
-                        'hindsight_summary'])
-                    trajectory[j][0].setdefault(
-                        'hindsight_value', []).append(float(trajectory[i][0][
-                                                                'value']))
-
-        for i in range(len(trajectory)):
-            if 'hindsight_value' in trajectory[i][0]:
-                trajectory[i][0]['hindsight_value'] = np.mean(trajectory[i][0]['hindsight_value'])
+                        'hindsight_data', []).append(hindsight_data)
 
         new_trajectory = copy.deepcopy(trajectory)
 
@@ -419,6 +484,27 @@ class Rollout(dict):
         for i in range(2,len(self["trajectory"])+1):
             if len(self["trajectory"]) >= 2:
                 new_traj = Trajectory(copy.deepcopy(self["trajectory"][:i]))
+
+                for j in range(len(new_traj) - 1):
+                    if 'hindsight_data' in new_traj[j][0]:
+                        # summarize and flatten hindsight trajectories which would have been visible up to time t-1.
+                        # TODO: also perform this labeling during inference.
+
+                        visible_summaries = []
+                        for d in new_traj[j][0]['hindsight_data']:
+                            if j + d['hindsight_length'] < i - 1:
+                                visible_summaries.append(d)
+                        new_traj[j][0]['hindsight_expectation'] = " || ".join([d['hindsight_summary'] for d in
+                                                                           visible_summaries])
+                        new_traj[j][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
+                                                                     visible_summaries])
+
+                # hindsight label the current state to better predict what will happen in the future.
+                current_state_foresight_data = new_traj[-1][0].get('hindsight_data', [])
+                new_traj[-1][0]['hindsight_expectation'] = " || ".join([d['hindsight_summary'] for d in current_state_foresight_data])
+                new_traj[-1][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
+                                                              current_state_foresight_data])
+
                 trajectories.append(new_traj)
         return trajectories
 

@@ -198,11 +198,11 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
               prompt, completion = t.hindsight_expectation_str(hindsight_value, batch_fitness_str)
               prompts.append(prompt)
               completions.append(completion)
-              prompt, completion = t.hindsight_labeling_str(hindsight_value, batch_fitness_str)
-              assert prompt in prompts
-              if completion not in completions:
-                prompts.append(prompt)
-                completions.append(completion)
+              # prompt, completion = t.hindsight_labeling_str(hindsight_value, batch_fitness_str)
+              # assert prompt in prompts
+              # if completion not in completions:
+              #   prompts.append(prompt)
+              #   completions.append(completion)
             elif format == "expected_observation":
               prompt, completion = t.expected_observation()
             else:
