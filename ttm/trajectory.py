@@ -434,10 +434,29 @@ class Batch:
     def fitness(self, rollouts):
         """Calculate fitness over the batch of rollouts."""
         fitness = [r.fitness() for r in rollouts]
+        num_finetunes = len([s for r in rollouts for s in r["trajectory"] if re.match(".*finetune.*", s[2])])
+        num_summaries = len([s for r in rollouts for s in r["trajectory"] if s[0].get('hindsight_summary',
+                                                                                      '').strip() != ''])
+        num_expectations = len([s for r in rollouts for s in r["trajectory"] if s[0].get('hindsight_expectation',
+                                                                                '') != ''])
+        if len(rollouts) > 0:
+            print(rollouts[0].args)
+        for r in rollouts:
+            for s in r["trajectory"]:
+                if s[0].get('hindsight_expectation', '') != '':
+                    print(s)
+        for r in rollouts:
+            for s in r["trajectory"]:
+                if s[0].get('hindsight_summary', '') != '':
+                    print(s)
+
         learning = [r.learning()["joint"] for r in rollouts]
         length = [len(r["trajectory"]) for r in rollouts]
         return {"mean_fitness": np.mean(fitness), "std_fitness": np.std(fitness), "fitness": fitness,
                 "mean_learning": np.mean(learning), "std_learning": np.std(learning), "learning": learning,
-                "length": length}
+                "length": length,
+                "num_finetunes": num_finetunes,
+                "num_summaries": num_summaries,
+                "num_expectations": num_expectations}
     
     

@@ -101,8 +101,8 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
           if int(r.args.run_id) == run_id and int(r.args.epoch) == e and r.args.partition == p:
             print("appending")
             selected_rollouts.append(r)
-          fitness = Batch.fitness(selected_rollouts)
-          epoch_fitness[p] = fitness
+      fitness = Batch.fitness(selected_rollouts)
+      epoch_fitness[p] = fitness
     epoch_fitness["epoch"] = e
     fitnesses.append(epoch_fitness)
   return fitnesses

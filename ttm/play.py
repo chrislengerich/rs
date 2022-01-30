@@ -287,7 +287,7 @@ def run_rollouts(policy: str, args):
         print(f"Batch fitness: {Batch.fitness(rollouts)}")
         print(f"Args: {args}")
         print("Saving agent trajectory")
-        txt_path, pickle_path = agent.write_rollouts(rollouts, game, policy, args)
+        txt_path, pickle_path = agent.write_rollouts([rollout], game, policy, args)
     return txt_path, pickle_path
 
 
