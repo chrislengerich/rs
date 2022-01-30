@@ -64,9 +64,17 @@ def format_batch_fitness_value(batch_fitness_value: float) -> str:
   else:
     return "high"
 
-def data_filter(agent_name, game, r):
-  return ((agent_name == "human") and ((re.match(
-      ".*train.*", game))) and any(["hindsight_summary" in ri for ri in r["trajectory"].states()]))
+def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_splits=List[str]):
+  is_allowed_split = False
+  for split in allowed_splits:
+    is_allowed_split = is_allowed_split or bool(re.match(f".*{split}.*", game))
+
+  is_allowed_name = False
+  for rollout_agent in allowed_agent_names:
+    is_allowed_name = is_allowed_name or bool(re.match(f".*{rollout_agent}.*", agent_name))
+
+  return (is_allowed_name and is_allowed_split and any(["hindsight_summary" in ri for ri in r[
+    "trajectory"].states()]))
 
 def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
   partitions = ["teacher", "student_train", "student_test"]
@@ -116,13 +124,14 @@ def partition_filter(current_args, rollout_args):
 def get_args(rollouts_filepath: str, run_id: int, epoch: int, partition: str):
   for key, val in read_rollouts(rollouts_filepath).items():
     for r in val:
-      if r.args.run_id == run_id and r.args.epoch == epoch and r.args.partition == partition:
+      if int(r.args.run_id) == int(run_id) and int(r.args.epoch) == int(epoch) and r.args.partition == partition:
         return r.args
   else:
     raise Exception(f"Could not find rollout with run_id={run_id}, epoch={epoch}, partition={partition}")
 
 def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath='rollouts.txt',
-                            format='model_inference_str', current_args=None, hindsight_fitness_current_batch=True):
+                            format='model_inference_str', current_args=None, hindsight_fitness_current_batch=True,
+                            allowed_agent_names=["human"], allowed_splits=["train"]):
   rollouts_dict = read_rollouts(rollouts_filepath)
 
   with open(finetune_filepath, 'w') as f:
@@ -143,7 +152,7 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
           print(r.fitness())
           print(r.learning())
           print(r.agent['name'])
-        if not data_filter(agent_name, key, r) or not partition_filter(current_args, r.args):
+        if not data_filter(agent_name, key, r, allowed_agent_names, allowed_splits) or not partition_filter(current_args, r.args):
           continue
         print("writing")
         selected_rollouts.append(r)

@@ -636,7 +636,8 @@ class SystemAgent(Agent):
         return f"python ttm/write_finetune.py --pickle_path=ttm/data/{args.policy}/grounding_data.pkl " \
                f"--finetune_path=ttm/data/" \
                f"{args.policy}/grounding_data.jsonl --format=hindsight_expectation_str --epoch={args.epoch} " \
-               f"--run_id={args.run_id} --partition={args.partition} --hindsight_fitness_current_batch=0"
+               f"--run_id={args.run_id} --partition={args.partition} --hindsight_fitness_current_batch=0 " \
+               f"--allowed_agent_names=human,hindsight_expectation --allowed_splits=train,valid" \
 
     def train_command(self, agent):
         """Returns the command-line string for the fine-tuning pass"""
