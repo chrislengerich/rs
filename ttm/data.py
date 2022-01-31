@@ -5,8 +5,12 @@ import json
 import re
 from collections import Counter
 
+import numpy as np
+from matplotlib import pyplot as plt
+
 from ttm.trajectory import Batch
 from typing import List
+import seaborn as sns
 
 
 def write_rollouts_text(rollouts_filepath='rollouts.pkl', filename='rollouts.txt', format='model_inference_str'):
@@ -89,7 +93,7 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
 
   fitnesses = []
   if epoch is None:
-    epochs = range(0, max([r.epoch for r in rollouts if r.args.run_id == run_id])+1)
+    epochs = range(0, max([int(r.args.epoch) for r in rollouts_list if int(r.args.run_id) == int(run_id)])+1)
   else:
     epochs = [epoch]
 
@@ -105,7 +109,27 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
       epoch_fitness[p] = fitness
     epoch_fitness["epoch"] = e
     fitnesses.append(epoch_fitness)
+
+  plot_fitness(fitnesses)
   return fitnesses
+
+def plot_fitness(fitnesses):
+  partition = "student_train"
+  x = []
+  y = []
+  for f in fitnesses:
+    num_fitnesses = len(f[partition]["fitness"])
+    y.extend(f[partition]["fitness"])
+    x.extend(num_fitnesses * [f["epoch"]])
+
+  # plots x1 using seaborn with lines and estimated variances.
+  sns.set(style="whitegrid")
+  sns.lineplot(x=x, y=y, err_style="band")
+  plt.legend(labels=[partition], title="Partition")
+  plt.title("Fitness vs. Epoch")
+  plt.xlabel("Epoch")
+  plt.ylabel("Fitness on Level 2")
+  plt.show()
 
 def partition_filter(current_args, rollout_args):
   """Return True if the rollout is valid training data."""
