@@ -85,14 +85,15 @@ def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_spli
   return (is_allowed_epoch and is_allowed_name and is_allowed_split and any(["hindsight_summary" in ri for ri in r[
     "trajectory"].states()]))
 
-def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
+def print_performance(rollouts_filepath, run_id: int, epoch: int=None, env:str="cooking_level_2"):
   partitions = ["teacher", "student_train", "student_test"]
   rollouts = read_rollouts(rollouts_filepath)
 
   # filter out only the rollouts where the run_id matches.
   rollouts_list = []
   for key, val in rollouts.items():
-    if re.match(f".*run_id='{run_id}'.*", key):
+    print(key)
+    if re.match(f".*run_id='{run_id}'.*", key) and re.match(f".*env='{env}'.*", key):
       rollouts_list.extend(val)
 
   fitnesses = []
@@ -114,10 +115,10 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
     epoch_fitness["epoch"] = e
     fitnesses.append(epoch_fitness)
 
-  plot_fitness(fitnesses)
+  plot_fitness(fitnesses, env)
   return fitnesses
 
-def plot_fitness(fitnesses):
+def plot_fitness(fitnesses, env:str="cooking_level_2"):
   partition = "student_train"
   x = []
   y = []
@@ -132,7 +133,7 @@ def plot_fitness(fitnesses):
   plt.legend(labels=[partition], title="Partition")
   plt.title("Fitness vs. Epoch")
   plt.xlabel("Epoch")
-  plt.ylabel("Fitness on Level 2")
+  plt.ylabel(f"Fitness on {env}")
   plt.show()
 
 def partition_filter(current_args, rollout_args):

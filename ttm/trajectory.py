@@ -390,7 +390,10 @@ class Rollout(dict):
         return env, new_rollout
 
     def fitness(self):
-        return self["scores"][-1]
+        if re.match(".*cooking.*", self.args.env):
+            return self["scores"][-1]
+        else: # text adventure style
+            return sum(self["scores"])
 
     def unique_ratio(self, dataset):
         return len(set(dataset)) / len(dataset)

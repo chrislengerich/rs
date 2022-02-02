@@ -337,6 +337,7 @@ class GPT3Agent(Agent):
                                                      top_p=0.95, n=self.n, stop="\n")
                     break
                 except Exception as e:
+                    print(e)
                     num_runs += 1
                     time.sleep(2)
             if not response:
