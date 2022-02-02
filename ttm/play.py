@@ -233,7 +233,7 @@ def run_rollouts(policy: str, args):
                 obs = f"sampled:"
             elif re.match(r".*finetune:.*", action):
                 testing = False
-                if rollout.agent["name"] != "human" or testing: # for testing
+                if False: # rollout.agent["name"] != "human" or testing: # for testing
                     sample_arg_string = shsplit(SystemAgent("").write_finetune(args))
                     #sample_args = parser.parse_args(shsplit(sample_arg_string))
                     output = subprocess.check_output(sample_arg_string)

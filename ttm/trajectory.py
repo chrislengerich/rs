@@ -339,12 +339,11 @@ class Trajectory(list):
         goal = str(self.goals()[0])
         string_repr = f"goal: [{goal}]\n"
         for i, (state, _, action) in enumerate(self):
-            # TODO(experiment with a summary version).
-            if i < len(self) - 8:
+            if i < len(self) - 6:
                 continue
             state_obs = dict([item for item in list(state.items()) if item[0] == 'obs'])
             state_obs = self.strip_state(str(state_obs))
-            string_repr += f"step {i} state: [{state_obs},"
+            string_repr += f"state: [{state_obs},"
             if i < len(self) - 1:
                 string_repr += f"action: [ {action} ]\n"
             else:

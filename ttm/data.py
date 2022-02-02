@@ -68,7 +68,7 @@ def format_batch_fitness_value(batch_fitness_value: float) -> str:
   else:
     return "high"
 
-def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_splits=List[str]):
+def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_splits=List[str], allowed_epochs=[]):
   is_allowed_split = False
   for split in allowed_splits:
     is_allowed_split = is_allowed_split or bool(re.match(f".*{split}.*", game))
@@ -77,7 +77,12 @@ def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_spli
   for rollout_agent in allowed_agent_names:
     is_allowed_name = is_allowed_name or bool(re.match(f".*{rollout_agent}.*", agent_name))
 
-  return (is_allowed_name and is_allowed_split and any(["hindsight_summary" in ri for ri in r[
+  is_allowed_epoch = int(r.args.epoch) in allowed_epochs
+
+  print("Filter values")
+  print(is_allowed_split, is_allowed_name, is_allowed_epoch)
+
+  return (is_allowed_epoch and is_allowed_name and is_allowed_split and any(["hindsight_summary" in ri for ri in r[
     "trajectory"].states()]))
 
 def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
@@ -87,7 +92,6 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None):
   # filter out only the rollouts where the run_id matches.
   rollouts_list = []
   for key, val in rollouts.items():
-    print(val[0].args)
     if re.match(f".*run_id='{run_id}'.*", key):
       rollouts_list.extend(val)
 
@@ -155,7 +159,7 @@ def get_args(rollouts_filepath: str, run_id: int, epoch: int, partition: str):
 
 def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath='rollouts.txt',
                             format='model_inference_str', current_args=None, hindsight_fitness_current_batch=True,
-                            allowed_agent_names=["human"], allowed_splits=["train"]):
+                            allowed_agent_names=["human"], allowed_splits=["train"], allowed_epochs=[]):
   rollouts_dict = read_rollouts(rollouts_filepath)
 
   with open(finetune_filepath, 'w') as f:
@@ -176,7 +180,8 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
           print(r.fitness())
           print(r.learning())
           print(r.agent['name'])
-        if not data_filter(agent_name, key, r, allowed_agent_names, allowed_splits) or not partition_filter(current_args, r.args):
+        if not data_filter(agent_name, key, r, allowed_agent_names, allowed_splits, allowed_epochs) or not \
+            partition_filter(current_args, r.args):
           continue
         print("writing")
         selected_rollouts.append(r)
@@ -208,6 +213,8 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
               prompt, completion = t.model_action_inference_str()
             elif format == "imitation_inference_str":
               prompt, completion = t.imitation_inference_str()
+              prompts = [prompt]
+              completions = [completion]
             elif format == "expected_observation_update":
               prompt, completion = t.expected_observation_key("update")
             elif format == "expected_observation_summary":
