@@ -447,9 +447,23 @@ class Rollout(dict):
 
         return new_traj
 
+    def accurate_hindsight(self, state):
+        accurate = 'hindsight_accurate' in state and state['hindsight_accurate'] == 1
+        return accurate
+
     def hindsight_trajectory(self, trajectory: Trajectory, unused_format: str):
         trajectory = Trajectory([t for t in trajectory if not 'invisible' in t[0]])
         trajectory.append(({'obs': 'end game'}, trajectory[-1][1], "sequence_end"))
+
+        blank_expectations = (self.agent["name"] != "human")
+        if blank_expectations:
+            for t in trajectory:
+                if not self.accurate_hindsight(t[0]):
+                    t[0]['hindsight_summary'] = ''
+                    t[0]['hindsight_length'] = ''
+                    t[0]['value'] = ''
+                t[0]['hindsight_data'] = []
+                t[0]['hindsight_expectation'] = ''
 
         num_obs = 1
         for i in range(len(trajectory) - num_obs):
@@ -469,6 +483,7 @@ class Rollout(dict):
 
         # label with dynamic-range hindsight trajectories.
         for i in range(len(trajectory)-1,0,-1):
+
             if trajectory.states()[i].get('hindsight_summary', '') != '':
                 try:
                     length = int(trajectory[i][0]['hindsight_length'])

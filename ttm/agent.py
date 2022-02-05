@@ -290,9 +290,12 @@ class GPT3Agent(Agent):
 
     # hindsight_expectation, cooking + zork
     engine = "curie:ft-personal-2022-02-03-00-11-38" # 200 human examples from TextWorld + 200 human examples from
+
+    # hindsight_expectation, cooking + zork agent labels (labels which have been identified as useful).
+    engine = "curie:ft-personal-2022-02-05-07-19-05"
+    engine = "curie:ft-personal-2022-02-05-08-14-46" # + 200 human labels from Zork.
+
     # Zork - epoch 0,5,6,7
-
-
 
     # goal.
     # machine-learned variants.

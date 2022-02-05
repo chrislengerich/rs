@@ -225,6 +225,15 @@ def get_args(rollouts_filepath: str, run_id: int, epoch: int, partition: str):
   else:
     raise Exception(f"Could not find rollout with run_id={run_id}, epoch={epoch}, partition={partition}")
 
+# heuristic - right now we are interested learning dynamics via expectations.
+def is_useful(trajectory):
+  for t in [trajectory[-1]]:
+    # if we see any useful hindsight_information.
+    if t[0].get('hindsight_expectation', '') != '':
+      return True
+  else:
+    return False
+
 def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath='rollouts.txt',
                             format='model_inference_str', current_args=None, hindsight_fitness_current_batch=True,
                             allowed_agent_names=["human"], allowed_splits=["train"], allowed_epochs=[]):
@@ -295,8 +304,12 @@ def write_rollouts_finetune(rollouts_filepath='rollouts.pkl', finetune_filepath=
               batch_fitness_str = format_batch_fitness_value(batch_fitness)
               prompts, completions = [], []
               prompt, completion = t.hindsight_expectation_str(hindsight_value, batch_fitness_str)
-              prompts.append(prompt)
-              completions.append(completion)
+
+              if (r.agent["name"] == "human" and (r.args.env == "cooking_level_2" or r.args.env == "zork1.z5"))\
+                  or (is_useful(t) and r.args.env == "zork1.z5" and r.agent["engine"] ==
+                      "curie:ft-personal-2022-02-01-05-23-34"):
+                prompts.append(prompt)
+                completions.append(completion)
               # prompt, completion = t.hindsight_labeling_str(hindsight_value, batch_fitness_str)
               # assert prompt in prompts
               # if completion not in completions:
