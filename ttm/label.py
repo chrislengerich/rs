@@ -11,5 +11,8 @@ if __name__ == "__main__":
   parser.add_argument("--run_id", type=int, default=None, help="Format of text file")
   parser.add_argument("--epoch", type=int, default=None, help="Format of text file")
   parser.add_argument("--env", type=str, default="cooking_level_2", help="Format of text file")
+  parser.add_argument("--partition", type=str, default=None, help="Partitions (comma-separated)")
+
   args = parser.parse_args()
-  pprint.pprint(label_summaries(args.pickle_path, args.run_id, args.epoch, args.env))
+  partitions = args.partition.split(",")
+  pprint.pprint(label_summaries(args.pickle_path, args.run_id, args.epoch, args.env, partitions))

@@ -88,9 +88,10 @@ def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_spli
   return (is_allowed_epoch and is_allowed_name and is_allowed_split and any(["hindsight_summary" in ri for ri in r[
     "trajectory"].states()]))
 
-def label_summaries(rollouts_filepath, run_id: int, epoch: int, env:str="cooking_level_2", labeled=False):
+def label_summaries(rollouts_filepath, run_id: int, epoch: int, env:str="cooking_level_2", labeled=False,
+                    partitions=["student_train"]):
   """Given summaries from |epoch|, |run_id|, |env| and |partition|, find the unmatched rollouts"""
-  rollouts_dict = filter_rollouts(env, rollouts_filepath, run_id, ["student_train"], epochs=[epoch])
+  rollouts_dict = filter_rollouts(env, rollouts_filepath, run_id, partitions, epochs=[epoch])
 
   rollouts_list = []
   for r in rollouts_dict.values():

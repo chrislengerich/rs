@@ -276,19 +276,22 @@ class GPT3Agent(Agent):
     # total_human: 79
     # total_agent: 0
 
+    # hindsight_expection, cooking
     engine = "curie:ft-personal-2022-01-30-23-45-01" # 44 human examples.
     engine = "curie:ft-personal-2022-01-31-22-25-10" # 44 human examples + 46 agent examples (epoch 3).
     engine = "curie:ft-personal-2022-01-31-23-37-58" # 117 human examples.
     engine = "curie:ft-personal-2022-02-01-05-23-34"  # 213 human examples
 
-    # modern imitation learning variants
+    # modern imitation learning variants, cooking
     engine = "curie:ft-personal-2022-02-01-18-13-36" # epoch 0 - 44 human examples
     engine = "curie:ft-personal-2022-02-01-18-06-16" # epoch 0,5 - 117 examples - accidentally wrote as the last 4
     # examples for epoch 6.
     engine = "curie:ft-personal-2022-02-01-17-55-29" # epoch 0,5,6 - 213 examples for epoch 6
 
+    # hindsight_expectation, cooking + zork
     engine = "curie:ft-personal-2022-02-03-00-11-38" # 200 human examples from TextWorld + 200 human examples from
     # Zork - epoch 0,5,6,7
+
 
 
     # goal.
