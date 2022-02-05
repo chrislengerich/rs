@@ -2,6 +2,7 @@ import copy
 import os.path
 import pickle
 import json
+import pprint
 import re
 from collections import Counter
 
@@ -77,6 +78,8 @@ def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_spli
   for rollout_agent in allowed_agent_names:
     is_allowed_name = is_allowed_name or bool(re.match(f".*{rollout_agent}.*", agent_name))
 
+  if r.args is None:
+    return False
   is_allowed_epoch = int(r.args.epoch) in allowed_epochs
 
   print("Filter values")
@@ -85,29 +88,61 @@ def data_filter(agent_name, game, r, allowed_agent_names=List[str], allowed_spli
   return (is_allowed_epoch and is_allowed_name and is_allowed_split and any(["hindsight_summary" in ri for ri in r[
     "trajectory"].states()]))
 
+def label_summaries(rollouts_filepath, run_id: int, epoch: int, env:str="cooking_level_2", labeled=False):
+  """Given summaries from |epoch|, |run_id|, |env| and |partition|, find the unmatched rollouts"""
+  rollouts_dict = filter_rollouts(env, rollouts_filepath, run_id, ["student_train"], epochs=[epoch])
+
+  rollouts_list = []
+  for r in rollouts_dict.values():
+    rollouts_list.extend(r)
+
+  with open(rollouts_filepath, "rb") as f:
+    full_rollouts = pickle.load(f)
+
+  for e in [epoch]:
+      for key, val in rollouts_dict.items():
+        print(key)
+        for r in val:
+          print(r.agent)
+          new_labels = False
+          for s in r["trajectory"]:
+            print(s[0]['obs'])
+            print(s[2])
+            print(s[0].get('hindsight_summary', ''))
+            print(s[0].get('hindsight_length', ''))
+            print(s[0].get('value', ''))
+            if "hindsight_summary" in s[0] and (s[0]["hindsight_summary"] != "" or labeled):
+              while "hindsight_accurate" not in s[0]:
+                try:
+                  s[0]["hindsight_accurate"] = int(input("Summary accurate? "))
+                  new_labels = True
+                except ValueError:
+                  continue
+          full_rollouts[key] = val
+          print(Batch.accuracy(val))
+          if new_labels:
+            with open(rollouts_filepath, "wb") as f:
+              pickle.dump(full_rollouts, f)
+              print("Saved new labels")
+
+  return rollouts_filepath + ".labeled"
+
+
 def print_performance(rollouts_filepath, run_id: int, epoch: int=None, env:str="cooking_level_2"):
   partitions = ["teacher", "student_train", "student_test"]
-  rollouts = read_rollouts(rollouts_filepath)
-
-  # filter out only the rollouts where the run_id matches.
+  rollouts_dict = filter_rollouts(env, rollouts_filepath, run_id, partitions)
   rollouts_list = []
-  for key, val in rollouts.items():
-    print(key)
-    if re.match(f".*run_id='{run_id}'.*", key) and re.match(f".*env='{env}'.*", key):
-      rollouts_list.extend(val)
+  for r in rollouts_dict.values():
+    rollouts_list.extend(r)
+  epochs = max_epoch(epoch, rollouts_list, run_id)
 
   fitnesses = []
-  if epoch is None:
-    epochs = range(0, max([int(r.args.epoch) for r in rollouts_list if int(r.args.run_id) == int(run_id)])+1)
-  else:
-    epochs = [epoch]
-
   for e in epochs:
     epoch_fitness = {}
     for p in partitions:
       selected_rollouts = []
       for r in rollouts_list:
-          if int(r.args.run_id) == run_id and int(r.args.epoch) == e and r.args.partition == p:
+          if (r.args) and int(r.args.run_id) == run_id and int(r.args.epoch) == e and r.args.partition == p:
             print("appending")
             selected_rollouts.append(r)
       fitness = Batch.fitness(selected_rollouts)
@@ -117,6 +152,36 @@ def print_performance(rollouts_filepath, run_id: int, epoch: int=None, env:str="
 
   plot_fitness(fitnesses, env)
   return fitnesses
+
+def filter_rollouts(env, rollouts_filepath, run_id, partitions=["student_train"], epochs=[]):
+  rollouts = read_rollouts(rollouts_filepath)
+  # filter out only the rollouts where the run_id matches.
+
+  # TBD: do this more efficiently with Pandas, etc.
+  filtered_rollouts = {}
+  for key, val in rollouts.items():
+    print(key)
+    partition_match = False
+    for p in partitions:
+      if re.match(f".*partition='{p}'.*", key):
+        partition_match = True
+
+    epoch_match = False
+    for e in epochs:
+      if re.match(f".*epoch='{e}'.*", key):
+        epoch_match = True
+    if re.match(f".*run_id='{run_id}'.*", key) and re.match(f".*env='{env}'.*", key) and partition_match and epoch_match:
+      filtered_rollouts[key] = val
+  return filtered_rollouts
+
+def max_epoch(epoch, rollouts_list, run_id):
+  # return a list of epochs given a run_id
+  if epoch is None:
+    epochs = range(0, max([int(r.args.epoch) for r in rollouts_list if int(r.args.run_id) == int(run_id)]) + 1)
+  else:
+    epochs = [epoch]
+  return epochs
+
 
 def plot_fitness(fitnesses, env:str="cooking_level_2"):
   partition = "student_train"
@@ -153,7 +218,8 @@ def partition_filter(current_args, rollout_args):
 def get_args(rollouts_filepath: str, run_id: int, epoch: int, partition: str):
   for key, val in read_rollouts(rollouts_filepath).items():
     for r in val:
-      if int(r.args.run_id) == int(run_id) and int(r.args.epoch) == int(epoch) and r.args.partition == partition:
+      if r.args and int(r.args.run_id) == int(run_id) and int(r.args.epoch) == int(epoch) and r.args.partition == \
+          partition:
         return r.args
   else:
     raise Exception(f"Could not find rollout with run_id={run_id}, epoch={epoch}, partition={partition}")

@@ -155,6 +155,22 @@ class Agent:
             #     pickle.dump(old_rollouts, f)
         return txt_path, pickle_path
 
+    def write_rollouts_overwrite(self, rollouts: List[Rollout], game: str, policy: str, args):
+        # write the rollouts data out to pickled versions and flat files for training.
+        pickle_path = f"ttm/data/{policy}/grounding_data.pkl"
+
+        if os.path.exists(pickle_path):
+            with open(pickle_path, 'rb') as f:
+                old_rollouts = pickle.load(f)
+        else:
+            old_rollouts = {}
+        key = f"{args} game='{game}'"
+        old_rollouts.setdefault(key, []).extend(rollouts)
+        with open(pickle_path, "wb") as f:
+            pickle.dump(old_rollouts, f)
+
+        return pickle_path
+
     def get_metalearning_action(self, agent, obs, rollout):
         agent.load_inference("ttm/gpt2-metalearn")
         action = agent.predict(obs, rollout)[0].strip()
@@ -271,7 +287,8 @@ class GPT3Agent(Agent):
     # examples for epoch 6.
     engine = "curie:ft-personal-2022-02-01-17-55-29" # epoch 0,5,6 - 213 examples for epoch 6
 
-
+    engine = "curie:ft-personal-2022-02-03-00-11-38" # 200 human examples from TextWorld + 200 human examples from
+    # Zork - epoch 0,5,6,7
 
 
     # goal.

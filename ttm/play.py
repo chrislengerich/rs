@@ -123,87 +123,6 @@ def run_rollouts(policy: str, args):
             if done:
                 break
 
-            # key structure:
-            # auxiliary dict structure:
-            #  id, epoch -> Epoch
-            #     Epoch:
-                    # { | teacher, student_train, student_test | -> env}
-                    #  | teacher, student_train, student_test | -> List[Rollout]
-
-            #  data visualizer:
-            #     given an id, calculate relevant teacher, student, test fitnesses.
-
-            # At inference time, substitute the model expectations for the next turn's update.
-            # All system commands have the following format: <command>:
-            # Training labels (key,value associations) are of the form:
-            #   training_set_id (incremented by one with each new span).
-            #   start training_set
-            #   label training_set
-            #   SysController ensures that:
-
-            #   1 epoch of meta-training:
-
-            #   First data filters:
-            #       Includes all data before it.
-            #   Second pass filter:
-            #       Include high-quality + contrastive data, taking all the lessons from data2vec.
-            #
-            #   Teacher pass -> creates a batch of trajectories to finetune on.
-            #      -> load train env [ done ]
-            #      -> teacher plays through, adds hindsight annotations and trains occasionally. [ done ]
-            #      -> filter: prior teacher and student batches. [ done ]
-            #      -> eval train env fitness + hindsight labeling [ done ]
-            #      -> retrain on env fitness [ done ]
-
-            #   Student (train env):
-            #      -> load train env
-            #      -> machine plays through, adding hindsight annotations + fine-tuning itself on the fly.
-            #      -> filter: prior teacher and student batches, including itself.
-            #      -> eval train env fitness + hindsight labeling
-
-            #   Student (test env):
-            #       -> load test env
-            #       -> machine plays through, adding hindsight annotations + fine-tuning itself.
-            #       -> eval train env fitness + hindsight labeling
-
-            # Reports:
-            #   1. Epoch.
-            #   2. Teacher fitness (train env).
-            #   3. Student fitness (train env).
-            #   4. Student fitness (test env).
-
-            # Improvements at the meta-epoch level:
-            # Add labeled student + teacher experiences from the train env to the aggregated experiences.
-            # Or, possibly just add labeled student experiences.
-
-            # structures:
-            #   1. Epoch:
-            #     2. Teacher rollouts + fitness (train env).
-            #     3. Student rollouts + fitness (train env).
-            #     4. Student rollouts + fitness (test env).
-
-            # one epoch:
-
-                # Human commands:
-                #  inputs: human x train x epoch x eval_retrain x run_id
-                #  valid data: train x preceding epochs
-                #  hindsight label, retrain (iteratively) until ended (no batch labels)
-                #  generate batch hindsight labels, push out to monitor data structure
-
-                #  retrain with new human batch + last epoch's agent batch -> new_agent_name
-                #  push new agent name + data keys to monitor structure such that we can
-                #  recreate training data + training process uniquely.
-
-                #  new_agent_name x train x epoch
-                #  valid data: train x preceding epochs
-                #  hindsight label the batch, push to monitor
-
-                #  new_agent_name x test x epoch
-                #  valid data: test x same epoch
-                #  hindsight label the batch, push to monitor
-
-                #  increment epoch
-
             trajectory[-1][-1] = action
             if re.match(r"restore:(.*)", action):
                 offset = int(re.match(r"restore:(.*)", action).group(1))
@@ -278,9 +197,10 @@ def run_rollouts(policy: str, args):
                 env.render()
             actions += 1
             print(f"Learning: {rollout.learning()['joint']}")
-            if rollout.learning()['joint'] < 0.85: # early exit from failing rollouts in the wrong part of the data
-                # distribution.
-                  break
+            # if rollout.learning()['joint'] < 0.85: # early exit from failing rollouts in the wrong part of
+            #     # the data
+            #     # distribution.
+            #       break
         rollouts.append(rollout)
         print(f"Agent rollout fitness: {rollout.fitness()}")
         print(f"Agent rollout learning: {rollout.learning()}")

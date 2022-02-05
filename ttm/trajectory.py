@@ -362,6 +362,7 @@ class Rollout(dict):
 
     agent = {}
     timestamp = None
+    args = None
     
     def __init__(self, trajectory: Trajectory, goal: Goal, scores: List[int], agent:dict = {}, args=None):
         self.agent = agent
@@ -414,7 +415,11 @@ class Rollout(dict):
         # label the past.
         for i in range(len(trajectory) - 1, 0, -1):
             if trajectory.states()[i].get('hindsight_summary', '') != '':
-                length = int(trajectory[i][0]['hindsight_length'])
+                try:
+                    length = int(trajectory[i][0]['hindsight_length'])
+                except Exception as e:
+                    print(e)
+                    length = 1
                 for j in range(i - length, i):
                     hindsight_data = {
                         'hindsight_summary': trajectory[i][0]['hindsight_summary'],
@@ -438,7 +443,8 @@ class Rollout(dict):
                 new_traj[j][0]['hindsight_expectation'] = " || ".join([d['hindsight_summary'] for d in
                                                                        visible_summaries])
                 new_traj[j][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
-                                                             visible_summaries])
+                                                                 visible_summaries if isinstance(d['hindsight_value'], int)])
+
         return new_traj
 
     def hindsight_trajectory(self, trajectory: Trajectory, unused_format: str):
@@ -464,15 +470,19 @@ class Rollout(dict):
         # label with dynamic-range hindsight trajectories.
         for i in range(len(trajectory)-1,0,-1):
             if trajectory.states()[i].get('hindsight_summary', '') != '':
-                length = int(trajectory[i][0]['hindsight_length'])
-                for j in range(i-length, i):
-                    hindsight_data = {
-                        'hindsight_summary': trajectory[i][0]['hindsight_summary'],
-                        'hindsight_length': length,
-                        'hindsight_value': trajectory[i][0]['value']
-                    }
-                    trajectory[j][0].setdefault(
-                        'hindsight_data', []).append(hindsight_data)
+                try:
+                    length = int(trajectory[i][0]['hindsight_length'])
+                    for j in range(i-length, i):
+                        hindsight_data = {
+                            'hindsight_summary': trajectory[i][0]['hindsight_summary'],
+                            'hindsight_length': length,
+                            'hindsight_value': trajectory[i][0]['value']
+                        }
+                        trajectory[j][0].setdefault(
+                            'hindsight_data', []).append(hindsight_data)
+                except Exception as e:
+                    print(e)
+                    continue
 
         new_trajectory = copy.deepcopy(trajectory)
 
@@ -498,14 +508,23 @@ class Rollout(dict):
                                 visible_summaries.append(d)
                         new_traj[j][0]['hindsight_expectation'] = " || ".join([d['hindsight_summary'] for d in
                                                                            visible_summaries])
-                        new_traj[j][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
-                                                                     visible_summaries])
+                        try:
+                            new_traj[j][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
+                                                                         visible_summaries])
+                        except Exception as e:
+
+                            print(e)
+                            new_traj[j][0]['hindsight_value'] = 0.0
 
                 # hindsight label the current state to better predict what will happen in the future.
                 current_state_foresight_data = new_traj[-1][0].get('hindsight_data', [])
                 new_traj[-1][0]['hindsight_expectation'] = " || ".join([d['hindsight_summary'] for d in current_state_foresight_data])
-                new_traj[-1][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
-                                                              current_state_foresight_data])
+                try:
+                    new_traj[-1][0]['hindsight_value'] = np.mean([float(d['hindsight_value']) for d in
+                                                                  current_state_foresight_data])
+                except Exception as e:
+                    print(e)
+                    new_traj[-1][0]['hindsight_value'] = 0.0
 
                 trajectories.append(new_traj)
         return trajectories
@@ -517,6 +536,27 @@ class Rollout(dict):
         return self.args.epoch_index
 
 class Batch:
+
+    @classmethod
+    def accuracy(self, rollouts):
+        """Calculate the accuracy of the hindsight summaries of a batch of rollouts."""
+        labeled = []
+        state_count = 0
+        for r in rollouts:
+            for t in r["trajectory"]:
+                if 'hindsight_summary' in t[0] and t[0]['hindsight_summary'] != '' and 'hindsight_accurate' in t[0]:
+                    labeled.append(t)
+                state_count += 1
+        accurate = len([l for l in labeled if l[0]['hindsight_accurate'] == 1])
+        stats = {
+            "accurate_count": accurate,
+            "labeled_count": len(labeled),
+            "labeled": labeled,
+            "total": state_count,
+            "accuracy": accurate / float(len(labeled)),
+            "fraction_labeled": len(labeled) / float(state_count)
+        }
+        return stats
 
     @classmethod
     def fitness(self, rollouts):
