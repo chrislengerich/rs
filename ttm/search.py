@@ -9,14 +9,12 @@ from typing import List
 
 class Search:
 
-  def search(self, rollout: Rollout, documents: List[Rollout]):
-    """Dispatches a query to the OpenAI search service."""
+  def search(self, rollout: Rollout, documents: List[Rollout], query: str, question: str):
+    """Dispatches a query to the OpenAI search service for question after pre-filtering rollouts on query."""
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    filter_word = "lantern" # rollout["trajectory"].step_model_inference_str(len(rollout["trajectory"][-1]))
-    query = "Am I carrying a lantern?"
 
     documents_str = []
-    for d in [documents[3]]:
+    for d in documents:
       if d["trajectory"][0][0] == '' or d["trajectory"].goals()[0] != rollout["trajectory"].goals()[0]:
         print("continuing")
         continue
@@ -29,17 +27,17 @@ class Search:
         # documents_str.append(hindsight_string[0] + hindsight_string[1])
 
     # TODO: this search functionality is a learned metric based on utility to the problem, not similarity.
-    documents_str = [d for d in documents_str if re.match(f".*{filter_word}.*", d, flags=re.DOTALL)]
+    documents_str = [d for d in documents_str if re.match(f".*{query}.*", d, flags=re.DOTALL)]
     for d in documents_str:
       print("\n")
       print(d)
     documents_str = documents_str[:30]
 
     print("query>>>")
-    print(query)
+    print(question)
     response = openai.Engine("davinci").search(
       documents=documents_str,
-      query=query
+      query=question
     )
     print("response>>>")
     response = response["data"]
@@ -62,4 +60,4 @@ if __name__ == "__main__":
     if re.match(".*zork1.z5.*", key):
       rollouts_list.extend(val)
   query_rollout = rollouts_list[3]
-  print(search.search(query_rollout, rollouts_list))
+  print(search.search(query_rollout, rollouts_list, "lantern", "am I carrying a lantern?"))

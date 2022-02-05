@@ -15,6 +15,7 @@ import inspect
 
 from jericho import FrotzEnv
 
+from search import Search
 from agent import TransformerAgent, HumanAgent, MetalearnedAgent, SystemAgent, Agent
 from trajectory import Trajectory, Rollout, Goal, Batch
 from typing import List
@@ -150,6 +151,15 @@ def run_rollouts(policy: str, args):
                 sample_args = parser.parse_args(shsplit(sample_arg_string))
                 write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format, args)
                 obs = f"sampled:"
+            elif re.match(r".*search:.*", action):
+                try:
+                    search_client = Search()
+                    (query, question) = re.match(r"search:(.*)", action).groups()[0].split(",")
+                    response = search_client.search(rollout, [rollout], query, question)
+                    obs = "searched: " + str(response[:5])
+                except Exception as e:
+                    print(e)
+                    obs = "exception"
             elif re.match(r".*finetune:.*", action):
                 testing = False
                 if False: # rollout.agent["name"] != "human" or testing: # for testing
