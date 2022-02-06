@@ -9,7 +9,7 @@ from typing import List
 
 class Search:
 
-  def search(self, rollout: Rollout, documents: List[Rollout], query: str, question: str):
+  def search(self, rollout: Rollout, documents: List[Rollout], query: str, question: str, use_search_results=False):
     """Dispatches a query to the OpenAI search service for question after pre-filtering rollouts on query."""
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -21,7 +21,8 @@ class Search:
 
       new_traj = d.hindsight_trajectory_inference(d["trajectory"])
       for t in new_traj:
-        documents_str.append('state: ' + str(t[0]) + ' action: ' + str(t[2]))
+        if not re.match(".*searched:.*", str(t[0])) and not use_search_results:
+          documents_str.append('state: ' + str(t[0]) + ' action: ' + str(t[2]))
         # for i in range(len(d["trajectory"])):
         # hindsight_string = new_rollout.hindsight_expectation_str()
         # documents_str.append(hindsight_string[0] + hindsight_string[1])
