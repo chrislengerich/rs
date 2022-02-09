@@ -113,7 +113,11 @@ def run_rollouts(policy: str, args):
         scores = []
         rollout = Rollout(trajectory, goal, scores, agent={"name": "not set" , "engine": "not set"}, args=args)
         while (actions < max_actions):
-            state = {"obs": obs}
+            state = {"obs": str(obs)}
+            if not isinstance(obs, str):
+                state["obs_object"] = obs
+                import pdb;
+                pdb.set_trace()
             trajectory.append([state, goal, "blank"])
             action, dict_update, formatted_query = agent.predict_rollout(rollout)
 
@@ -151,12 +155,18 @@ def run_rollouts(policy: str, args):
                 sample_args = parser.parse_args(shsplit(sample_arg_string))
                 write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format, args)
                 obs = f"sampled:"
-            elif re.match(r".*search:.*", action):
+            elif re.match(r".*\?", action): # if the statement ends in a question mark.
+                qa_agent = HumanAgent("empty goal") # TODO: make this a real agent
                 try:
-                    search_client = Search()
-                    (query, question) = re.match(r"search:(.*)", action).groups()[0].split(",")
-                    response = search_client.search(rollout, [rollout], query, question)
-                    obs = "searched: " + str(response[:5])
+                    question = action.strip()
+                    question_data = qa_agent.handle_question(question, rollout)
+                    state["question_data"] = question_data
+                    state["hindsight_summary"] = question_data["question"] + " " + question_data["answer"]
+                    state["hindsight_length"] = 0
+                    state["value"] = 1
+                    print(state)
+                    print ("")
+                    obs = question_data["answer"]
                 except Exception as e:
                     print(e)
                     obs = "exception"
@@ -202,7 +212,7 @@ def run_rollouts(policy: str, args):
                 scores.append(score)
                 print(scores)
             if isinstance(env, FrotzEnv):
-                print(obs)
+                print(str(obs))
             else:
                 env.render()
             actions += 1

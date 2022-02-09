@@ -26,6 +26,7 @@ import readline
 import json
 
 from ttm import data
+from ttm.search import Search
 
 class Agent:
 
@@ -626,8 +627,42 @@ class HumanAgent(Agent):
     #     action = input("action: ")
     #     return action, state, ""
 
-    # predict a rollout, accounting for hindsight learning.
+    def handle_question(self, question: str, rollout: Rollout):
+        # takes a question and a rollout and returns the search actions and the answer.
+        question_data = {"question": question, "searches": []}
+        print("")
+        search = input("search: ")
+        while search != "":
+            client = Search()
+            results = client.search(rollout, [rollout], search, question)
+            for r in results:
+                print(r["document_str"])
+                relevant = input("relevant (1 or 0): ")
+                if relevant == "":
+                    break
+                else:
+                    r["relevant"] = relevant
+            question_data["searches"].append({"search_term": search, "results": results})
+            search = input("search: ")
+        answer = input("answer: ")
+        question_data["answer"] = answer
+        return question_data
+
     def predict_rollout(self, rollout: Rollout):
+        hindsight_summary = input("hindsight_summary: ")
+        if hindsight_summary != "":
+            length = input("hindsight_length: ")
+            value = input("value: ") # 100.0.
+        else:
+            length = ""
+            value = ""
+        state = {"hindsight_summary": hindsight_summary, "hindsight_length": length, "value": value, "expectation":
+            "", "update": "", "summary": ""}
+        action = input("action: ")
+        return action, state, ""
+
+    # predict a rollout, accounting for hindsight learning.
+    def predict_rollout_old(self, rollout: Rollout):
         hindsight_summary = input("hindsight_summary: ")
         if hindsight_summary != "":
             length = input("hindsight_length: ")

@@ -1,12 +1,13 @@
 import re
 import datetime
+import json
 
 from typing import Optional
 from typing import List
 import copy
 import numpy as np
 
-class Goal:
+class Goal(dict):
     def __init__(self, goal: str): 
         self.goal = goal
     
@@ -487,14 +488,20 @@ class Rollout(dict):
             if trajectory.states()[i].get('hindsight_summary', '') != '':
                 try:
                     length = int(trajectory[i][0]['hindsight_length'])
-                    for j in range(i-length, i):
-                        hindsight_data = {
-                            'hindsight_summary': trajectory[i][0]['hindsight_summary'],
-                            'hindsight_length': length,
-                            'hindsight_value': trajectory[i][0]['value']
-                        }
+                    hindsight_data = {
+                        'hindsight_summary': trajectory[i][0]['hindsight_summary'],
+                        'hindsight_length': length,
+                        'hindsight_value': trajectory[i][0]['value']
+                    }
+                    states = list(range(i-length,i))
+                    while len(states) > 0:
+                        j = states.pop()
                         trajectory[j][0].setdefault(
                             'hindsight_data', []).append(hindsight_data)
+                        if trajectory[j][0].get('question_data', None):
+                            for response in trajectory[j][0]['question_data']['results']:
+                                import pdb; pdb.set_trace()
+                                states.append(int(response['step']))
                 except Exception as e:
                     print(e)
                     continue

@@ -14,24 +14,29 @@ class Search:
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
     documents_str = []
+    documents_map = []
     for d in documents:
       if d["trajectory"][0][0] == '' or d["trajectory"].goals()[0] != rollout["trajectory"].goals()[0]:
         print("continuing")
         continue
 
       new_traj = d.hindsight_trajectory_inference(d["trajectory"])
-      for t in new_traj:
-        if not re.match(".*searched:.*", str(t[0])) and not use_search_results:
-          documents_str.append('state: ' + str(t[0]) + ' action: ' + str(t[2]))
-        # for i in range(len(d["trajectory"])):
-        # hindsight_string = new_rollout.hindsight_expectation_str()
-        # documents_str.append(hindsight_string[0] + hindsight_string[1])
 
-    # TODO: this search functionality is a learned metric based on utility to the problem, not similarity.
-    documents_str = [d for d in documents_str if re.match(f".*{query}.*", d, flags=re.DOTALL)]
-    for d in documents_str:
-      print("\n")
-      print(d)
+      # build out the context windows to search on.
+      for i,t in enumerate(new_traj):
+
+        # show search +/- 2 context lines for the search.
+        candidate_str = ""
+        for j in range(max(0, i-3), i+1):
+          candidate_str += 'state: ' + str(new_traj[j][0]['obs']).strip() + '\naction: ' + str(new_traj[j][2]) + '\n\n'
+
+        # TODO: this search functionality is a learned metric based on utility to the problem, not similarity.
+        if (not re.match(".*question_data.*", str(t[0])) and not use_search_results) and (re.match(f".*{query}.*",
+                                                                                               candidate_str,
+                                                                                               flags=re.DOTALL)):
+          t[0]["step"] = i
+          documents_str.append(candidate_str)
+          documents_map.append(t)
     documents_str = documents_str[:30]
 
     print("query>>>")
@@ -43,7 +48,8 @@ class Search:
     print("response>>>")
     response = response["data"]
     for rank in response:
-      rank["document_text"] = documents_str[rank["document"]]
+      rank["full_document"] = documents_map[rank["document"]]
+      rank["document_str"] = documents_str[rank["document"]]
     response = sorted(response, key = lambda x: x["score"], reverse=True)
     return response
 
