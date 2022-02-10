@@ -636,12 +636,14 @@ class HumanAgent(Agent):
             client = Search()
             results = client.search(rollout, [rollout], search, question)
             for r in results:
+                print(">>>>")
                 print(r["document_str"])
                 relevant = input("relevant (1 or 0): ")
                 if relevant == "":
                     break
                 else:
                     r["relevant"] = relevant
+                print("<<<<")
             question_data["searches"].append({"search_term": search, "results": results})
             search = input("search: ")
         answer = input("answer: ")

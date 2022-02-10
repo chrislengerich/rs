@@ -28,7 +28,8 @@ class Search:
         # show search +/- 2 context lines for the search.
         candidate_str = ""
         for j in range(max(0, i-3), i+1):
-          candidate_str += 'state: ' + str(new_traj[j][0]['obs']).strip() + '\naction: ' + str(new_traj[j][2]) + '\n\n'
+          candidate_str += f'step: {j} state: ' + str(new_traj[j][0]['obs']).strip() + '\naction: ' + str(new_traj[j][2]) + \
+                           '\n\n'
 
         # TODO: this search functionality is a learned metric based on utility to the problem, not similarity.
         if (not re.match(".*question_data.*", str(t[0])) and not use_search_results) and (re.match(f".*{query}.*",

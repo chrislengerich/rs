@@ -164,7 +164,6 @@ def run_rollouts(policy: str, args):
                     state["hindsight_summary"] = question_data["question"] + " " + question_data["answer"]
                     state["hindsight_length"] = 0
                     state["value"] = 1
-                    print(state)
                     print ("")
                     obs = question_data["answer"]
                 except Exception as e:
