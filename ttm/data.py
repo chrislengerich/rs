@@ -129,6 +129,43 @@ def label_summaries(rollouts_filepath, run_id: int, epoch: int, env:str="cooking
   return rollouts_filepath + ".labeled"
 
 
+def label_novel_expectation(rollouts_filepath, run_id: int, epoch: int, env:str="cooking_level_2", labeled=False,
+                    partitions=["student_train"]):
+  """Given summaries from |epoch|, |run_id|, |env| and |partition|, find the unmatched rollouts"""
+  rollouts_dict = filter_rollouts(env, rollouts_filepath, run_id, partitions, epochs=[epoch])
+
+  rollouts_list = []
+  for r in rollouts_dict.values():
+    rollouts_list.extend(r)
+
+  with open(rollouts_filepath, "rb") as f:
+    full_rollouts = pickle.load(f)
+
+  for e in [epoch]:
+      for key, val in rollouts_dict.items():
+        print(key)
+        for r in val:
+          print(r.agent)
+          new_labels = False
+          for s in r["trajectory"]:
+            print(s[0]['obs'])
+            print(s[0].get('hindsight_expectation', ''))
+            if "hindsight_expectation" in s[0] and (s[0]["hindsight_expectation"] != "" or labeled):
+              while "novel_hindsight_expectation" not in s[0]:
+                try:
+                  s[0]["novel_hindsight_expectation"] = input("Novel hindsight expectation? ")
+                  new_labels = True
+                except ValueError:
+                  continue
+          full_rollouts[key] = val
+          if new_labels:
+            with open(rollouts_filepath + ".new_expectations", "wb") as f:
+              pickle.dump(full_rollouts, f)
+              print("Saved new labels")
+
+  return rollouts_filepath + ".labeled"
+
+
 def print_performance(rollouts_filepath, run_id: int, epoch: int=None, env:str="cooking_level_2"):
   partitions = ["teacher", "student_train", "student_test"]
   rollouts_dict = filter_rollouts(env, rollouts_filepath, run_id, partitions)
