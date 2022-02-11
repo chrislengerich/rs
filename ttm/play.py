@@ -15,6 +15,7 @@ import inspect
 
 from jericho import FrotzEnv
 
+from search import Search
 from agent import TransformerAgent, HumanAgent, MetalearnedAgent, SystemAgent, Agent
 from trajectory import Trajectory, Rollout, Goal, Batch
 from typing import List
@@ -112,7 +113,11 @@ def run_rollouts(policy: str, args):
         scores = []
         rollout = Rollout(trajectory, goal, scores, agent={"name": "not set" , "engine": "not set"}, args=args)
         while (actions < max_actions):
-            state = {"obs": obs}
+            state = {"obs": str(obs)}
+            if not isinstance(obs, str):
+                state["obs_object"] = obs
+                import pdb;
+                pdb.set_trace()
             trajectory.append([state, goal, "blank"])
             action, dict_update, formatted_query = agent.predict_rollout(rollout)
 
@@ -122,87 +127,6 @@ def run_rollouts(policy: str, args):
 
             if done:
                 break
-
-            # key structure:
-            # auxiliary dict structure:
-            #  id, epoch -> Epoch
-            #     Epoch:
-                    # { | teacher, student_train, student_test | -> env}
-                    #  | teacher, student_train, student_test | -> List[Rollout]
-
-            #  data visualizer:
-            #     given an id, calculate relevant teacher, student, test fitnesses.
-
-            # At inference time, substitute the model expectations for the next turn's update.
-            # All system commands have the following format: <command>:
-            # Training labels (key,value associations) are of the form:
-            #   training_set_id (incremented by one with each new span).
-            #   start training_set
-            #   label training_set
-            #   SysController ensures that:
-
-            #   1 epoch of meta-training:
-
-            #   First data filters:
-            #       Includes all data before it.
-            #   Second pass filter:
-            #       Include high-quality + contrastive data, taking all the lessons from data2vec.
-            #
-            #   Teacher pass -> creates a batch of trajectories to finetune on.
-            #      -> load train env [ done ]
-            #      -> teacher plays through, adds hindsight annotations and trains occasionally. [ done ]
-            #      -> filter: prior teacher and student batches. [ done ]
-            #      -> eval train env fitness + hindsight labeling [ done ]
-            #      -> retrain on env fitness [ done ]
-
-            #   Student (train env):
-            #      -> load train env
-            #      -> machine plays through, adding hindsight annotations + fine-tuning itself on the fly.
-            #      -> filter: prior teacher and student batches, including itself.
-            #      -> eval train env fitness + hindsight labeling
-
-            #   Student (test env):
-            #       -> load test env
-            #       -> machine plays through, adding hindsight annotations + fine-tuning itself.
-            #       -> eval train env fitness + hindsight labeling
-
-            # Reports:
-            #   1. Epoch.
-            #   2. Teacher fitness (train env).
-            #   3. Student fitness (train env).
-            #   4. Student fitness (test env).
-
-            # Improvements at the meta-epoch level:
-            # Add labeled student + teacher experiences from the train env to the aggregated experiences.
-            # Or, possibly just add labeled student experiences.
-
-            # structures:
-            #   1. Epoch:
-            #     2. Teacher rollouts + fitness (train env).
-            #     3. Student rollouts + fitness (train env).
-            #     4. Student rollouts + fitness (test env).
-
-            # one epoch:
-
-                # Human commands:
-                #  inputs: human x train x epoch x eval_retrain x run_id
-                #  valid data: train x preceding epochs
-                #  hindsight label, retrain (iteratively) until ended (no batch labels)
-                #  generate batch hindsight labels, push out to monitor data structure
-
-                #  retrain with new human batch + last epoch's agent batch -> new_agent_name
-                #  push new agent name + data keys to monitor structure such that we can
-                #  recreate training data + training process uniquely.
-
-                #  new_agent_name x train x epoch
-                #  valid data: train x preceding epochs
-                #  hindsight label the batch, push to monitor
-
-                #  new_agent_name x test x epoch
-                #  valid data: test x same epoch
-                #  hindsight label the batch, push to monitor
-
-                #  increment epoch
 
             trajectory[-1][-1] = action
             if re.match(r"restore:(.*)", action):
@@ -231,9 +155,23 @@ def run_rollouts(policy: str, args):
                 sample_args = parser.parse_args(shsplit(sample_arg_string))
                 write_rollouts_finetune(sample_args.pickle_path, sample_args.finetune_path, sample_args.format, args)
                 obs = f"sampled:"
+            elif re.match(r".*\?", action): # if the statement ends in a question mark.
+                qa_agent = HumanAgent("empty goal") # TODO: make this a real agent
+                try:
+                    question = action.strip()
+                    question_data = qa_agent.handle_question(question, rollout)
+                    state["question_data"] = question_data
+                    state["hindsight_summary"] = question_data["question"] + " " + question_data["answer"]
+                    state["hindsight_length"] = 0
+                    state["value"] = 1
+                    print ("")
+                    obs = question_data["answer"]
+                except Exception as e:
+                    print(e)
+                    obs = "exception"
             elif re.match(r".*finetune:.*", action):
                 testing = False
-                if rollout.agent["name"] != "human" or testing: # for testing
+                if False: # rollout.agent["name"] != "human" or testing: # for testing
                     sample_arg_string = shsplit(SystemAgent("").write_finetune(args))
                     #sample_args = parser.parse_args(shsplit(sample_arg_string))
                     output = subprocess.check_output(sample_arg_string)
@@ -273,14 +211,15 @@ def run_rollouts(policy: str, args):
                 scores.append(score)
                 print(scores)
             if isinstance(env, FrotzEnv):
-                print(obs)
+                print(str(obs))
             else:
                 env.render()
             actions += 1
             print(f"Learning: {rollout.learning()['joint']}")
-            if rollout.learning()['joint'] < 0.85: # early exit from failing rollouts in the wrong part of the data
-                # distribution.
-                  break
+            # if rollout.learning()['joint'] < 0.85: # early exit from failing rollouts in the wrong part of
+            #     # the data
+            #     # distribution.
+            #       break
         rollouts.append(rollout)
         print(f"Agent rollout fitness: {rollout.fitness()}")
         print(f"Agent rollout learning: {rollout.learning()}")

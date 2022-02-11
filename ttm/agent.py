@@ -26,6 +26,7 @@ import readline
 import json
 
 from ttm import data
+from ttm.search import Search
 
 class Agent:
 
@@ -155,6 +156,22 @@ class Agent:
             #     pickle.dump(old_rollouts, f)
         return txt_path, pickle_path
 
+    def write_rollouts_overwrite(self, rollouts: List[Rollout], game: str, policy: str, args):
+        # write the rollouts data out to pickled versions and flat files for training.
+        pickle_path = f"ttm/data/{policy}/grounding_data.pkl"
+
+        if os.path.exists(pickle_path):
+            with open(pickle_path, 'rb') as f:
+                old_rollouts = pickle.load(f)
+        else:
+            old_rollouts = {}
+        key = f"{args} game='{game}'"
+        old_rollouts.setdefault(key, []).extend(rollouts)
+        with open(pickle_path, "wb") as f:
+            pickle.dump(old_rollouts, f)
+
+        return pickle_path
+
     def get_metalearning_action(self, agent, obs, rollout):
         agent.load_inference("ttm/gpt2-metalearn")
         action = agent.predict(obs, rollout)[0].strip()
@@ -260,6 +277,27 @@ class GPT3Agent(Agent):
     # total_human: 79
     # total_agent: 0
 
+    # hindsight_expection, cooking
+    engine = "curie:ft-personal-2022-01-30-23-45-01" # 44 human examples.
+    engine = "curie:ft-personal-2022-01-31-22-25-10" # 44 human examples + 46 agent examples (epoch 3).
+    engine = "curie:ft-personal-2022-01-31-23-37-58" # 117 human examples.
+    engine = "curie:ft-personal-2022-02-01-05-23-34"  # 213 human examples
+
+    # modern imitation learning variants, cooking
+    engine = "curie:ft-personal-2022-02-01-18-13-36" # epoch 0 - 44 human examples
+    engine = "curie:ft-personal-2022-02-01-18-06-16" # epoch 0,5 - 117 examples - accidentally wrote as the last 4
+    # examples for epoch 6.
+    engine = "curie:ft-personal-2022-02-01-17-55-29" # epoch 0,5,6 - 213 examples for epoch 6
+
+    # hindsight_expectation, cooking + zork
+    engine = "curie:ft-personal-2022-02-03-00-11-38" # 200 human examples from TextWorld + 200 human examples from
+
+    # hindsight_expectation, cooking + zork agent labels (labels which have been identified as useful).
+    engine = "curie:ft-personal-2022-02-05-07-19-05"
+    engine = "curie:ft-personal-2022-02-05-08-14-46" # + 200 human labels from Zork.
+
+    # Zork - epoch 0,5,6,7
+
     # goal.
     # machine-learned variants.
     #engine = "davinci-instruct-beta"
@@ -323,6 +361,7 @@ class GPT3Agent(Agent):
                                                      top_p=0.95, n=self.n, stop="\n")
                     break
                 except Exception as e:
+                    print(e)
                     num_runs += 1
                     time.sleep(2)
             if not response:
@@ -588,8 +627,44 @@ class HumanAgent(Agent):
     #     action = input("action: ")
     #     return action, state, ""
 
-    # predict a rollout, accounting for hindsight learning.
+    def handle_question(self, question: str, rollout: Rollout):
+        # takes a question and a rollout and returns the search actions and the answer.
+        question_data = {"question": question, "searches": []}
+        print("")
+        search = input("search: ")
+        while search != "":
+            client = Search()
+            results = client.search(rollout, [rollout], search, question)
+            for r in results:
+                print(">>>>")
+                print(r["document_str"])
+                relevant = input("relevant (1 or 0): ")
+                if relevant == "":
+                    break
+                else:
+                    r["relevant"] = relevant
+                print("<<<<")
+            question_data["searches"].append({"search_term": search, "results": results})
+            search = input("search: ")
+        answer = input("answer: ")
+        question_data["answer"] = answer
+        return question_data
+
     def predict_rollout(self, rollout: Rollout):
+        hindsight_summary = input("hindsight_summary: ")
+        if hindsight_summary != "":
+            length = input("hindsight_length: ")
+            value = input("value: ") # 100.0.
+        else:
+            length = ""
+            value = ""
+        state = {"hindsight_summary": hindsight_summary, "hindsight_length": length, "value": value, "expectation":
+            "", "update": "", "summary": ""}
+        action = input("action: ")
+        return action, state, ""
+
+    # predict a rollout, accounting for hindsight learning.
+    def predict_rollout_old(self, rollout: Rollout):
         hindsight_summary = input("hindsight_summary: ")
         if hindsight_summary != "":
             length = input("hindsight_length: ")
