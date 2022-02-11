@@ -3,7 +3,7 @@ Research repo. This is generally WIP code, feel free to ping me for questions.
 
 ```
 # ttm (Transformer Turing Machine)
-conda env create -name <your_env_name> -python=3.7
+conda env create -name <your_env_name> python=3.7
 conda activate <your_env_name>
 pip install -r requirements.txt
 
@@ -17,7 +17,6 @@ wget https://github.com/BYU-PCCL/z-machine-games/archive/master.zip
 gunzip master.zip
 
 # Policies are grouped by folders in the ttm/data subdir
-
 mkdir ttm/data/<your_policy_name>
 
 # play Zork as a human and write the trajectories to the ttm/data/<your_policy_name> subdir
