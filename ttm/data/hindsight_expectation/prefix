@@ -1,0 +1,23 @@
+goal: [Hey, thanks for coming over to TextWorld! Please toss the napkin on the floor of the launderette. > -= Launderette =-0/2]
+step 1 state: ['obs': 'You make out a locked Canadian safe here. You make out a drawer.\n\n\n\n> -= Launderette =-0/1', 'summary': 'my goal is to toss the napkin on the floor of the launderette.', 'expectation': 'napkin is tossed', 'update': 0] action: [toss napkin]
+
+goal: [Hey, thanks for coming over to TextWorld! Please toss the napkin on the floor of the launderette. > -= Launderette =-0/2]
+step 1 state: ['obs': 'You make out a locked Canadian safe here. You make out a drawer.\n\n\n\n> -= Launderette =-0/1', 'summary': 'my goal is to toss the napkin on the floor of the launderette.', 'expectation': 'napkin is tossed', 'update': 0] action: [toss napkin]
+step 2 state: ['obs': "\nThat's not a verb I recognise.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to toss the napkin on the floor of the launderette. I can\'t use the verb "toss"', 'expectation': 'napkin is thrown', 'update': 1] action: [throw napkin on floor]
+
+goal: [Hey, thanks for coming over to TextWorld! Please toss the napkin on the floor of the launderette. > -= Launderette =-0/2]
+step 1 state: ['obs': 'You make out a locked Canadian safe here. You make out a drawer.\n\n\n\n> -= Launderette =-0/1', 'summary': 'my goal is to toss the napkin on the floor of the launderette.', 'expectation': 'napkin is tossed', 'update': 0] action: [toss napkin]
+step 2 state: ['obs': "\nThat's not a verb I recognise.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to toss the napkin on the floor of the launderette. I can\'t use the verb "toss"', 'expectation': 'napkin is thrown', 'update': 1] action: [throw napkin on floor]
+step 3 state: ['obs': "\nYou can't see any such thing.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to toss the napkin on the floor of the launderette. I can\'t use the verb "toss". I can\'t use the word "floor", maybe.', 'expectation': 'napkin is thrown on the floor', 'update': 0] action: [throw napkin]
+
+goal: [Hey, thanks for coming over to TextWorld! Please drop the fly larva on the floor of the launderette. > -= Launderette =-0/2]
+step 1 state: ['obs': "You can see a table. But oh no! there's nothing on this piece of garbage. It would have been so cool if there was stuff on the table.\n\nThere is an unblocked exit to the west.\n\n> -= Launderette =-0/1", 'summary': 'my goal is to drop the fly larva on the floor of the launderette', 'expectation': 'fly larva is dropped', 'update': 0] action: [drop fly larva]
+
+goal: [Welcome to another exciting session of TextWorld! Check that the type G chest is unlocked with the type G latchkey. > -= Launderette =-0/2]
+step 1 state: ['obs': 'You can make out a type G chest.\n\nThere is a closed door leading west. You need an unblocked exit? You should try going north.\n\n> -= Launderette =-0/1', 'summary': 'I need to check that the type G chest is unlocked with the latchkey.', 'expectation': 'chest is unlocked', 'update': 0] action: [unlock chest]
+step 2 state: ['obs': '\nWhat do you want to unlock the type G chest with?\n\n> -= Launderette =-0/1', 'summary': 'I need to check that the type G chest is unlocked with the latchkey. It is asking for what I want to unlock the chest with (latchkey)', 'expectation': 'chest is unlocked', 'update': 1] action: [latchkey]
+
+goal: [Welcome to another exciting session of TextWorld! Check that the type G chest is unlocked with the type G latchkey. > -= Launderette =-0/2]
+step 1 state: ['obs': 'You can make out a type G chest.\n\nThere is a closed door leading west. You need an unblocked exit? You should try going north.\n\n> -= Launderette =-0/1', 'summary': " 'I need to check that the type G chest is unlocked with the latchkey.', ", 'expectation': " 'chest is unlocked', ", 'update': ' 0'] action: [unlock chest with latchkey]
+
+{model_inference_str}
