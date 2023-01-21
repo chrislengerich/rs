@@ -7,8 +7,6 @@ conda env create -name <your_env_name> python=3.7
 conda activate <your_env_name>
 pip install -r requirements.txt
 
-
-
 # get an OpenAI beta key from beta.openai.com and add to your ~/.bashrc
 # we use OpenAI's GPT-3 fine-tuning for an experimental high-capacity model.
 export OPENAI_API_KEY=
