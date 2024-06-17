@@ -1,5 +1,6 @@
 # rs
 Research repo. This is generally WIP code, feel free to ping me for questions.
+arXiv paper: https://arxiv.org/abs/2204.12639
 
 ```
 # ttm (Transformer Turing Machine)
